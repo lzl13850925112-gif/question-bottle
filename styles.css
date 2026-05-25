@@ -114,7 +114,7 @@ h3 {
   top: 0;
   z-index: 5;
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(5, 1fr);
   gap: 8px;
   margin: 22px 0 14px;
   padding: 8px 0;
@@ -349,6 +349,46 @@ input:focus {
   align-items: center;
   gap: 8px;
   margin-top: 14px;
+}
+
+.mini-button {
+  min-height: 34px;
+  padding: 6px 10px;
+  font-size: 0.9rem;
+}
+
+.danger-button {
+  border-color: rgba(255, 154, 140, 0.32);
+  color: var(--danger);
+}
+
+.mine-grid {
+  display: grid;
+  gap: 16px;
+}
+
+.mine-section {
+  display: grid;
+  gap: 10px;
+}
+
+.mine-section h3 {
+  color: var(--muted);
+  font-weight: 400;
+}
+
+.content-card {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.035);
+  padding: 14px;
+}
+
+.content-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
 }
 
 .inline-replies {

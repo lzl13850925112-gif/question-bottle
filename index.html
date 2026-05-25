@@ -26,12 +26,12 @@
         <button class="action-button" data-view="ask" type="button">留下问题</button>
         <button class="action-button" data-view="answer" type="button">回答陌生人</button>
         <button class="action-button" data-view="check" type="button">查看回复</button>
+        <button class="action-button" data-view="mine" type="button">我的内容</button>
       </nav>
 
       <section class="notice" aria-label="隐私提醒">
         <p>
-          默认不需要姓名、邮箱、手机号或账号。请不要提交敏感个人信息。
-          这是社交意义上的匿名，不是加密匿名。
+          这里不使用账号。其他人不会看到是谁写的内容。网站只用一个保存在你浏览器里的本地 token，帮你管理自己的内容。请不要提交敏感个人信息；托管和数据库服务仍可能有技术日志。
         </p>
       </section>
 
@@ -161,6 +161,17 @@
         </form>
 
         <div class="replies" id="reply-list" aria-live="polite"></div>
+      </section>
+
+      <section class="panel" id="mine" aria-labelledby="mine-title">
+        <div class="section-heading">
+          <h2 id="mine-title">我的内容</h2>
+          <p>只显示这个浏览器发过的内容。换设备或清除浏览器数据后，这里不会自动同步。</p>
+        </div>
+
+        <div class="mine-grid" id="my-content" aria-live="polite">
+          <article class="empty-state">正在读取这个浏览器里的内容。</article>
+        </div>
       </section>
 
       <p class="status" id="status" role="status" aria-live="polite"></p>
