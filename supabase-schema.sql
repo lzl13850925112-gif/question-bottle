@@ -7,115 +7,103 @@ CREATE EXTENSION IF NOT EXISTS pgcrypto;
 -- 2. Core tables
 CREATE TABLE IF NOT EXISTS public.questions (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  public_id text NOT NULL UNIQUE DEFAULT encode(gen_random_bytes(16), 'hex'),
-  question_text text NOT NULL,
-  claim_token_hash text NOT NULL UNIQUE,
+  public_id text UNIQUE DEFAULT encode(gen_random_bytes(16), 'hex'),
+  question_text text,
+  claim_token_hash text UNIQUE,
   owner_token_hash text,
-  allow_public boolean NOT NULL DEFAULT false,
+  allow_public boolean DEFAULT false,
   edited_at timestamptz,
-  created_at timestamptz NOT NULL DEFAULT now()
+  created_at timestamptz DEFAULT now()
 );
 
 CREATE TABLE IF NOT EXISTS public.answers (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  public_id text NOT NULL UNIQUE DEFAULT encode(gen_random_bytes(16), 'hex'),
-  question_id uuid NOT NULL REFERENCES public.questions(id) ON DELETE CASCADE,
-  answer_text text NOT NULL,
+  public_id text UNIQUE DEFAULT encode(gen_random_bytes(16), 'hex'),
+  question_id uuid REFERENCES public.questions(id) ON DELETE CASCADE,
+  answer_text text,
   owner_token_hash text,
-  allow_public boolean NOT NULL DEFAULT false,
-  created_at timestamptz NOT NULL DEFAULT now()
+  allow_public boolean DEFAULT false,
+  created_at timestamptz DEFAULT now()
 );
 
 CREATE TABLE IF NOT EXISTS public.public_messages (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  public_id text NOT NULL UNIQUE DEFAULT encode(gen_random_bytes(16), 'hex'),
-  message_kind text NOT NULL DEFAULT 'message',
-  message_text text NOT NULL,
+  public_id text UNIQUE DEFAULT encode(gen_random_bytes(16), 'hex'),
+  message_kind text DEFAULT 'message',
+  message_text text,
   owner_token_hash text,
   source_answer_id uuid REFERENCES public.answers(id) ON DELETE SET NULL,
   edited_at timestamptz,
-  created_at timestamptz NOT NULL DEFAULT now()
+  created_at timestamptz DEFAULT now()
 );
 
 CREATE TABLE IF NOT EXISTS public.public_message_replies (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  message_id uuid NOT NULL REFERENCES public.public_messages(id) ON DELETE CASCADE,
-  reply_text text NOT NULL,
-  created_at timestamptz NOT NULL DEFAULT now()
+  message_id uuid REFERENCES public.public_messages(id) ON DELETE CASCADE,
+  reply_text text,
+  created_at timestamptz DEFAULT now()
 );
 
 CREATE TABLE IF NOT EXISTS public.public_message_likes (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  message_id uuid NOT NULL REFERENCES public.public_messages(id) ON DELETE CASCADE,
-  owner_token_hash text NOT NULL,
-  created_at timestamptz NOT NULL DEFAULT now()
+  message_id uuid REFERENCES public.public_messages(id) ON DELETE CASCADE,
+  owner_token_hash text,
+  created_at timestamptz DEFAULT now()
 );
 
 CREATE TABLE IF NOT EXISTS public.answer_feedback (
   answer_id uuid PRIMARY KEY REFERENCES public.answers(id) ON DELETE CASCADE,
-  asker_liked boolean NOT NULL DEFAULT false,
+  asker_liked boolean DEFAULT false,
   asker_reply_text text,
-  created_at timestamptz NOT NULL DEFAULT now(),
-  updated_at timestamptz NOT NULL DEFAULT now()
+  created_at timestamptz DEFAULT now(),
+  updated_at timestamptz DEFAULT now()
 );
 
 -- 3. Migration-safe columns for existing databases
-ALTER TABLE public.questions
-  ADD COLUMN IF NOT EXISTS public_id text;
+ALTER TABLE public.questions ADD COLUMN IF NOT EXISTS public_id text DEFAULT encode(gen_random_bytes(16), 'hex');
+ALTER TABLE public.questions ADD COLUMN IF NOT EXISTS question_text text;
+ALTER TABLE public.questions ADD COLUMN IF NOT EXISTS claim_token_hash text;
+ALTER TABLE public.questions ADD COLUMN IF NOT EXISTS owner_token_hash text;
+ALTER TABLE public.questions ADD COLUMN IF NOT EXISTS allow_public boolean DEFAULT false;
+ALTER TABLE public.questions ADD COLUMN IF NOT EXISTS edited_at timestamptz;
+ALTER TABLE public.questions ADD COLUMN IF NOT EXISTS created_at timestamptz DEFAULT now();
 
-UPDATE public.questions
-SET public_id = encode(gen_random_bytes(16), 'hex')
-WHERE public_id IS NULL;
+ALTER TABLE public.answers ADD COLUMN IF NOT EXISTS public_id text DEFAULT encode(gen_random_bytes(16), 'hex');
+ALTER TABLE public.answers ADD COLUMN IF NOT EXISTS question_id uuid REFERENCES public.questions(id) ON DELETE CASCADE;
+ALTER TABLE public.answers ADD COLUMN IF NOT EXISTS answer_text text;
+ALTER TABLE public.answers ADD COLUMN IF NOT EXISTS owner_token_hash text;
+ALTER TABLE public.answers ADD COLUMN IF NOT EXISTS allow_public boolean DEFAULT false;
+ALTER TABLE public.answers ADD COLUMN IF NOT EXISTS created_at timestamptz DEFAULT now();
 
-ALTER TABLE public.questions
-  ALTER COLUMN public_id SET DEFAULT encode(gen_random_bytes(16), 'hex');
+ALTER TABLE public.public_messages ADD COLUMN IF NOT EXISTS public_id text DEFAULT encode(gen_random_bytes(16), 'hex');
+ALTER TABLE public.public_messages ADD COLUMN IF NOT EXISTS message_kind text DEFAULT 'message';
+ALTER TABLE public.public_messages ADD COLUMN IF NOT EXISTS message_text text;
+ALTER TABLE public.public_messages ADD COLUMN IF NOT EXISTS owner_token_hash text;
+ALTER TABLE public.public_messages ADD COLUMN IF NOT EXISTS source_answer_id uuid REFERENCES public.answers(id) ON DELETE SET NULL;
+ALTER TABLE public.public_messages ADD COLUMN IF NOT EXISTS edited_at timestamptz;
+ALTER TABLE public.public_messages ADD COLUMN IF NOT EXISTS created_at timestamptz DEFAULT now();
 
-ALTER TABLE public.questions
-  ALTER COLUMN public_id SET NOT NULL;
+ALTER TABLE public.public_message_replies ADD COLUMN IF NOT EXISTS message_id uuid REFERENCES public.public_messages(id) ON DELETE CASCADE;
+ALTER TABLE public.public_message_replies ADD COLUMN IF NOT EXISTS reply_text text;
+ALTER TABLE public.public_message_replies ADD COLUMN IF NOT EXISTS created_at timestamptz DEFAULT now();
 
-ALTER TABLE public.questions
-  ADD COLUMN IF NOT EXISTS owner_token_hash text;
+ALTER TABLE public.public_message_likes ADD COLUMN IF NOT EXISTS id uuid DEFAULT gen_random_uuid();
+ALTER TABLE public.public_message_likes ADD COLUMN IF NOT EXISTS message_id uuid REFERENCES public.public_messages(id) ON DELETE CASCADE;
+ALTER TABLE public.public_message_likes ADD COLUMN IF NOT EXISTS owner_token_hash text;
+ALTER TABLE public.public_message_likes ADD COLUMN IF NOT EXISTS created_at timestamptz DEFAULT now();
 
-ALTER TABLE public.questions
-  ADD COLUMN IF NOT EXISTS allow_public boolean NOT NULL DEFAULT false;
-
-ALTER TABLE public.questions
-  ADD COLUMN IF NOT EXISTS edited_at timestamptz;
-
-ALTER TABLE public.answers
-  ADD COLUMN IF NOT EXISTS public_id text;
-
-UPDATE public.answers
-SET public_id = encode(gen_random_bytes(16), 'hex')
-WHERE public_id IS NULL;
-
-ALTER TABLE public.answers
-  ALTER COLUMN public_id SET DEFAULT encode(gen_random_bytes(16), 'hex');
-
-ALTER TABLE public.answers
-  ALTER COLUMN public_id SET NOT NULL;
-
-ALTER TABLE public.answers
-  ADD COLUMN IF NOT EXISTS owner_token_hash text;
-
-ALTER TABLE public.answers
-  ADD COLUMN IF NOT EXISTS allow_public boolean NOT NULL DEFAULT false;
-
-ALTER TABLE public.public_messages
-  ADD COLUMN IF NOT EXISTS message_kind text NOT NULL DEFAULT 'message';
-
-ALTER TABLE public.public_messages
-  ADD COLUMN IF NOT EXISTS owner_token_hash text;
-
-ALTER TABLE public.public_messages
-  ADD COLUMN IF NOT EXISTS source_answer_id uuid REFERENCES public.answers(id) ON DELETE SET NULL;
-
-ALTER TABLE public.public_messages
-  ADD COLUMN IF NOT EXISTS edited_at timestamptz;
+ALTER TABLE public.answer_feedback ADD COLUMN IF NOT EXISTS answer_id uuid REFERENCES public.answers(id) ON DELETE CASCADE;
+ALTER TABLE public.answer_feedback ADD COLUMN IF NOT EXISTS asker_liked boolean DEFAULT false;
+ALTER TABLE public.answer_feedback ADD COLUMN IF NOT EXISTS asker_reply_text text;
+ALTER TABLE public.answer_feedback ADD COLUMN IF NOT EXISTS created_at timestamptz DEFAULT now();
+ALTER TABLE public.answer_feedback ADD COLUMN IF NOT EXISTS updated_at timestamptz DEFAULT now();
 
 -- 4. Indexes
 CREATE UNIQUE INDEX IF NOT EXISTS questions_public_id_idx
   ON public.questions (public_id);
+
+CREATE UNIQUE INDEX IF NOT EXISTS questions_claim_token_hash_idx
+  ON public.questions (claim_token_hash);
 
 CREATE UNIQUE INDEX IF NOT EXISTS answers_public_id_idx
   ON public.answers (public_id);
@@ -148,6 +136,12 @@ CREATE UNIQUE INDEX IF NOT EXISTS public_messages_source_answer_id_idx
 CREATE UNIQUE INDEX IF NOT EXISTS public_message_likes_unique_idx
   ON public.public_message_likes (message_id, owner_token_hash);
 
+CREATE INDEX IF NOT EXISTS public_message_likes_owner_token_hash_idx
+  ON public.public_message_likes (owner_token_hash);
+
+CREATE UNIQUE INDEX IF NOT EXISTS answer_feedback_answer_id_idx
+  ON public.answer_feedback (answer_id);
+
 -- 5. Row Level Security
 ALTER TABLE public.questions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.answers ENABLE ROW LEVEL SECURITY;
@@ -156,41 +150,7 @@ ALTER TABLE public.public_message_replies ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.public_message_likes ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.answer_feedback ENABLE ROW LEVEL SECURITY;
 
-REVOKE ALL ON TABLE public.questions FROM anon, authenticated;
-REVOKE ALL ON TABLE public.answers FROM anon, authenticated;
-REVOKE ALL ON TABLE public.public_messages FROM anon, authenticated;
-REVOKE ALL ON TABLE public.public_message_replies FROM anon, authenticated;
-REVOKE ALL ON TABLE public.public_message_likes FROM anon, authenticated;
-REVOKE ALL ON TABLE public.answer_feedback FROM anon, authenticated;
-
--- 6. Drop older RPC signatures before recreating current ones
-DROP FUNCTION IF EXISTS public.is_blocked_text(text);
-DROP FUNCTION IF EXISTS public.is_sha256_hex(text);
-DROP FUNCTION IF EXISTS public.submit_question(text, text);
-DROP FUNCTION IF EXISTS public.submit_question(text, text, boolean);
-DROP FUNCTION IF EXISTS public.submit_question(text, text, boolean, text);
-DROP FUNCTION IF EXISTS public.get_random_question(integer);
-DROP FUNCTION IF EXISTS public.get_random_question(integer, text[]);
-DROP FUNCTION IF EXISTS public.submit_answer(text, text);
-DROP FUNCTION IF EXISTS public.submit_answer(text, text, boolean);
-DROP FUNCTION IF EXISTS public.submit_answer(text, text, boolean, text);
-DROP FUNCTION IF EXISTS public.get_replies_by_token(text);
-DROP FUNCTION IF EXISTS public.submit_public_message(text);
-DROP FUNCTION IF EXISTS public.submit_public_message(text, text);
-DROP FUNCTION IF EXISTS public.get_public_messages(integer);
-DROP FUNCTION IF EXISTS public.get_public_messages(integer, text);
-DROP FUNCTION IF EXISTS public.submit_public_message_reply(text, text);
-DROP FUNCTION IF EXISTS public.get_public_message_replies(text);
-DROP FUNCTION IF EXISTS public.like_public_message(text, text);
-DROP FUNCTION IF EXISTS public.update_public_message(text, text, text);
-DROP FUNCTION IF EXISTS public.delete_public_message(text, text);
-DROP FUNCTION IF EXISTS public.get_my_content(text);
-DROP FUNCTION IF EXISTS public.update_my_question(text, text, text);
-DROP FUNCTION IF EXISTS public.delete_my_question(text, text);
-DROP FUNCTION IF EXISTS public.like_answer_by_asker(text, text);
-DROP FUNCTION IF EXISTS public.send_asker_reply(text, text, text);
-
--- 7. Helper: placeholder spam/profanity check
+-- 6. Helper: placeholder spam/profanity check
 CREATE OR REPLACE FUNCTION public.is_blocked_text(input_text text)
 RETURNS boolean
 LANGUAGE plpgsql
@@ -200,7 +160,7 @@ BEGIN
 END;
 $$;
 
--- 8. Helper: validate SHA-256 hex values from browser-generated tokens
+-- 7. Helper: validate SHA-256 hex values from browser-generated tokens
 CREATE OR REPLACE FUNCTION public.is_sha256_hex(input_text text)
 RETURNS boolean
 LANGUAGE plpgsql
@@ -210,12 +170,12 @@ BEGIN
 END;
 $$;
 
--- 9. RPC: submit an anonymous question
+-- 8. RPC: submit an anonymous question
 CREATE OR REPLACE FUNCTION public.submit_question(
   question_body text,
   claim_token_hash_value text,
-  allow_public_value boolean DEFAULT false,
-  owner_token_hash_value text DEFAULT NULL
+  allow_public_value boolean,
+  owner_token_hash_value text
 )
 RETURNS void
 LANGUAGE plpgsql
@@ -256,10 +216,10 @@ BEGIN
 END;
 $$;
 
--- 10. RPC: fetch one random low-answer question, excluding recently seen ids
+-- 9. RPC: fetch one random low-answer question, excluding recently seen ids
 CREATE OR REPLACE FUNCTION public.get_random_question(
-  answer_limit integer DEFAULT 5,
-  excluded_public_ids text[] DEFAULT ARRAY[]::text[]
+  answer_limit integer,
+  excluded_public_ids text[]
 )
 RETURNS TABLE (
   public_id text,
@@ -287,12 +247,12 @@ BEGIN
 END;
 $$;
 
--- 11. RPC: submit an anonymous answer and publish only if both sides consent
+-- 10. RPC: submit an anonymous answer and publish only if both sides consent
 CREATE OR REPLACE FUNCTION public.submit_answer(
   question_public_id_value text,
   answer_body text,
-  allow_public_value boolean DEFAULT false,
-  owner_token_hash_value text DEFAULT NULL
+  allow_public_value boolean,
+  owner_token_hash_value text
 )
 RETURNS void
 LANGUAGE plpgsql
@@ -371,7 +331,7 @@ BEGIN
 END;
 $$;
 
--- 12. RPC: look up private bottle replies by claim token hash
+-- 11. RPC: look up private bottle replies by claim token hash
 CREATE OR REPLACE FUNCTION public.get_replies_by_token(
   claim_token_hash_value text
 )
@@ -410,7 +370,7 @@ BEGIN
 END;
 $$;
 
--- 13. RPC: submit a short public anonymous message
+-- 12. RPC: submit a short public anonymous message
 CREATE OR REPLACE FUNCTION public.submit_public_message(
   message_body text,
   owner_token_hash_value text
@@ -453,7 +413,7 @@ BEGIN
 END;
 $$;
 
--- 14. RPC: read recent public anonymous messages
+-- 13. RPC: read recent public anonymous messages
 CREATE OR REPLACE FUNCTION public.get_public_messages(
   limit_count integer,
   owner_token_hash_value text
@@ -515,7 +475,7 @@ BEGIN
 END;
 $$;
 
--- 15. RPC: anonymously reply to a public message
+-- 14. RPC: anonymously reply to a public message
 CREATE OR REPLACE FUNCTION public.submit_public_message_reply(
   message_public_id_value text,
   reply_body text
@@ -551,7 +511,7 @@ BEGIN
 END;
 $$;
 
--- 16. RPC: read replies for one public message
+-- 15. RPC: read replies for one public message
 CREATE OR REPLACE FUNCTION public.get_public_message_replies(
   message_public_id_value text
 )
@@ -577,7 +537,7 @@ BEGIN
 END;
 $$;
 
--- 17. RPC: like a public message once per browser-local visitor token
+-- 16. RPC: like a public message once per browser-local visitor token
 CREATE OR REPLACE FUNCTION public.like_public_message(
   message_public_id_value text,
   owner_token_hash_value text
@@ -609,7 +569,7 @@ BEGIN
 END;
 $$;
 
--- 18. RPC: owner edits a public board message
+-- 17. RPC: owner edits a public board message
 CREATE OR REPLACE FUNCTION public.update_public_message(
   message_public_id_value text,
   owner_token_hash_value text,
@@ -648,7 +608,7 @@ BEGIN
 END;
 $$;
 
--- 19. RPC: owner deletes a public board message
+-- 18. RPC: owner deletes a public board message
 CREATE OR REPLACE FUNCTION public.delete_public_message(
   message_public_id_value text,
   owner_token_hash_value text
@@ -674,7 +634,7 @@ BEGIN
 END;
 $$;
 
--- 20. RPC: read content owned by this browser-local visitor token
+-- 19. RPC: read content owned by this browser-local visitor token
 CREATE OR REPLACE FUNCTION public.get_my_content(
   owner_token_hash_value text
 )
@@ -750,7 +710,7 @@ BEGIN
 END;
 $$;
 
--- 21. RPC: owner edits a question only while it has no answers
+-- 20. RPC: owner edits a question only while it has no answers
 CREATE OR REPLACE FUNCTION public.update_my_question(
   question_public_id_value text,
   owner_token_hash_value text,
@@ -805,7 +765,7 @@ BEGIN
 END;
 $$;
 
--- 22. RPC: owner deletes a question and its related bottle Q&A public copies
+-- 21. RPC: owner deletes a question and its related bottle Q&A public copies
 CREATE OR REPLACE FUNCTION public.delete_my_question(
   question_public_id_value text,
   owner_token_hash_value text
@@ -844,7 +804,7 @@ BEGIN
 END;
 $$;
 
--- 23. RPC: asker likes an answer after opening the private claim link
+-- 22. RPC: asker likes an answer after opening the private claim link
 CREATE OR REPLACE FUNCTION public.like_answer_by_asker(
   claim_token_hash_value text,
   answer_public_id_value text
@@ -890,7 +850,7 @@ BEGIN
 END;
 $$;
 
--- 24. RPC: asker sends one short reply to an answer
+-- 23. RPC: asker sends one short reply to an answer
 CREATE OR REPLACE FUNCTION public.send_asker_reply(
   claim_token_hash_value text,
   answer_public_id_value text,
@@ -957,7 +917,7 @@ BEGIN
 END;
 $$;
 
--- 25. Function permissions
+-- 24. Function permissions
 GRANT USAGE ON SCHEMA public TO anon;
 GRANT EXECUTE ON FUNCTION public.submit_question(text, text, boolean, text) TO anon;
 GRANT EXECUTE ON FUNCTION public.get_random_question(integer, text[]) TO anon;
@@ -976,8 +936,94 @@ GRANT EXECUTE ON FUNCTION public.delete_my_question(text, text) TO anon;
 GRANT EXECUTE ON FUNCTION public.like_answer_by_asker(text, text) TO anon;
 GRANT EXECUTE ON FUNCTION public.send_asker_reply(text, text, text) TO anon;
 
-REVOKE EXECUTE ON FUNCTION public.is_blocked_text(text) FROM public;
-REVOKE EXECUTE ON FUNCTION public.is_sha256_hex(text) FROM public;
+NOTIFY pgrst, 'reload schema';
+
+-- 25. Read-only diagnostics for Supabase SQL Editor
+WITH required_tables(object_name) AS (
+  VALUES
+    ('public.questions'),
+    ('public.answers'),
+    ('public.public_messages'),
+    ('public.public_message_replies'),
+    ('public.public_message_likes'),
+    ('public.answer_feedback')
+),
+required_columns(table_name, column_name) AS (
+  VALUES
+    ('questions', 'public_id'),
+    ('questions', 'question_text'),
+    ('questions', 'claim_token_hash'),
+    ('questions', 'owner_token_hash'),
+    ('questions', 'allow_public'),
+    ('questions', 'edited_at'),
+    ('answers', 'public_id'),
+    ('answers', 'question_id'),
+    ('answers', 'answer_text'),
+    ('answers', 'owner_token_hash'),
+    ('answers', 'allow_public'),
+    ('public_messages', 'public_id'),
+    ('public_messages', 'message_kind'),
+    ('public_messages', 'message_text'),
+    ('public_messages', 'owner_token_hash'),
+    ('public_messages', 'source_answer_id'),
+    ('public_messages', 'edited_at'),
+    ('public_message_replies', 'message_id'),
+    ('public_message_replies', 'reply_text'),
+    ('public_message_likes', 'message_id'),
+    ('public_message_likes', 'owner_token_hash'),
+    ('answer_feedback', 'answer_id'),
+    ('answer_feedback', 'asker_liked'),
+    ('answer_feedback', 'asker_reply_text'),
+    ('answer_feedback', 'updated_at')
+),
+required_functions(object_name, regproc_name) AS (
+  VALUES
+    ('public.submit_question(text,text,boolean,text)', 'public.submit_question(text,text,boolean,text)'),
+    ('public.get_random_question(integer,text[])', 'public.get_random_question(integer,text[])'),
+    ('public.submit_answer(text,text,boolean,text)', 'public.submit_answer(text,text,boolean,text)'),
+    ('public.get_replies_by_token(text)', 'public.get_replies_by_token(text)'),
+    ('public.submit_public_message(text,text)', 'public.submit_public_message(text,text)'),
+    ('public.get_public_messages(integer,text)', 'public.get_public_messages(integer,text)'),
+    ('public.submit_public_message_reply(text,text)', 'public.submit_public_message_reply(text,text)'),
+    ('public.get_public_message_replies(text)', 'public.get_public_message_replies(text)'),
+    ('public.like_public_message(text,text)', 'public.like_public_message(text,text)'),
+    ('public.update_public_message(text,text,text)', 'public.update_public_message(text,text,text)'),
+    ('public.delete_public_message(text,text)', 'public.delete_public_message(text,text)'),
+    ('public.get_my_content(text)', 'public.get_my_content(text)'),
+    ('public.update_my_question(text,text,text)', 'public.update_my_question(text,text,text)'),
+    ('public.delete_my_question(text,text)', 'public.delete_my_question(text,text)'),
+    ('public.like_answer_by_asker(text,text)', 'public.like_answer_by_asker(text,text)'),
+    ('public.send_asker_reply(text,text,text)', 'public.send_asker_reply(text,text,text)')
+)
+SELECT
+  'table' AS check_type,
+  object_name,
+  to_regclass(object_name) IS NOT NULL AS exists
+FROM required_tables
+
+UNION ALL
+
+SELECT
+  'column' AS check_type,
+  'public.' || table_name || '.' || column_name AS object_name,
+  EXISTS (
+    SELECT 1
+    FROM information_schema.columns
+    WHERE table_schema = 'public'
+      AND table_name = required_columns.table_name
+      AND column_name = required_columns.column_name
+  ) AS exists
+FROM required_columns
+
+UNION ALL
+
+SELECT
+  'function' AS check_type,
+  object_name,
+  to_regprocedure(regproc_name) IS NOT NULL AS exists
+FROM required_functions
+
+ORDER BY check_type, object_name;
 
 -- TODO: Add real rate limiting before public launch.
 -- TODO: Replace the placeholder blocked-word check with stronger moderation.
