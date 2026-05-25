@@ -2,8 +2,12 @@ let config = window.BOTTLE_CONFIG || {};
 
 const state = {
   currentQuestion: null,
-  client: null
+  client: null,
+  publicMessages: []
 };
+
+const RECENT_QUESTIONS_KEY = "questionBottle.recentQuestionIds";
+const MAX_RECENT_QUESTIONS = 12;
 
 const blockedTerms = [
   "spam.example",
@@ -17,8 +21,14 @@ const statusEl = document.querySelector("#status");
 const views = [...document.querySelectorAll(".panel")];
 const viewButtons = [...document.querySelectorAll("[data-view]")];
 
+const publicMessageForm = document.querySelector("#public-message-form");
+const publicMessageText = document.querySelector("#public-message-text");
+const publicMessageList = document.querySelector("#public-message-list");
+const refreshMessagesButton = document.querySelector("#refresh-messages");
+
 const questionForm = document.querySelector("#question-form");
 const questionText = document.querySelector("#question-text");
+const questionPublicConsent = document.querySelector("#question-public-consent");
 const claimResult = document.querySelector("#claim-result");
 const claimLink = document.querySelector("#claim-link");
 const copyClaimLink = document.querySelector("#copy-claim-link");
@@ -28,6 +38,7 @@ const skipQuestionButton = document.querySelector("#skip-question");
 const randomQuestionCard = document.querySelector("#random-question-card");
 const answerForm = document.querySelector("#answer-form");
 const answerText = document.querySelector("#answer-text");
+const answerPublicConsent = document.querySelector("#answer-public-consent");
 
 const checkForm = document.querySelector("#check-form");
 const claimToken = document.querySelector("#claim-token");
@@ -56,6 +67,7 @@ async function init() {
     config.supabaseUrl,
     config.supabaseAnonKey
   );
+  await loadPublicMessages();
 }
 
 async function loadConfig() {
@@ -84,7 +96,7 @@ async function loadConfig() {
     };
     window.BOTTLE_CONFIG = config;
   } catch {
-    // Local static development can use ignored config.js instead.
+    // Local static development can use config.js instead.
   }
 }
 
@@ -105,7 +117,7 @@ function bindNavigation() {
   viewButtons.forEach((button) => {
     button.addEventListener("click", () => showView(button.dataset.view));
   });
-  showView("ask");
+  showView("board");
 }
 
 function showView(id) {
@@ -128,6 +140,10 @@ function bindCounters() {
 }
 
 function bindForms() {
+  publicMessageForm.addEventListener("submit", submitPublicMessage);
+  refreshMessagesButton.addEventListener("click", loadPublicMessages);
+  publicMessageList.addEventListener("click", handlePublicMessageClick);
+  publicMessageList.addEventListener("submit", submitPublicReply);
   questionForm.addEventListener("submit", submitQuestion);
   loadQuestionButton.addEventListener("click", loadRandomQuestion);
   skipQuestionButton.addEventListener("click", loadRandomQuestion);
@@ -144,6 +160,148 @@ function openTokenFromUrl() {
   showView("check");
 }
 
+async function submitPublicMessage(event) {
+  event.preventDefault();
+  if (!state.client) return setStatus("Supabase 尚未配置。", true);
+
+  const text = normalizeText(publicMessageText.value);
+  const validation = validateText(text, 2, 280);
+  if (!validation.ok) return setStatus(validation.message, true);
+
+  await withBusy(publicMessageForm, async () => {
+    const { error } = await state.client.rpc("submit_public_message", {
+      message_body: text
+    });
+
+    if (error) throw error;
+    publicMessageForm.reset();
+    updateAllCounters();
+    setStatus("留言已发布。");
+    await loadPublicMessages();
+  });
+}
+
+async function loadPublicMessages() {
+  if (!state.client) return;
+
+  await withBusy(refreshMessagesButton, async () => {
+    const { data, error } = await state.client.rpc("get_public_messages", {
+      limit_count: 30
+    });
+
+    if (error) throw error;
+    state.publicMessages = data || [];
+    renderPublicMessages(state.publicMessages);
+    if (!state.publicMessages.length) setStatus("暂无公开留言。");
+  });
+}
+
+function renderPublicMessages(messages) {
+  if (!messages.length) {
+    publicMessageList.innerHTML =
+      '<article class="empty-state">还没有留言。你可以先发一条。</article>';
+    return;
+  }
+
+  publicMessageList.innerHTML = messages
+    .map(
+      (message) => `
+        <article class="message-card" data-message-id="${escapeHtml(message.public_id)}">
+          <p class="message-meta">${formatDate(message.created_at)} · ${Number(message.reply_count || 0)} 条回复</p>
+          ${message.message_kind === "bottle_qa" ? '<p class="message-meta">公开问答</p>' : ""}
+          <p class="message-body">${escapeHtml(message.message_text)}</p>
+          <div class="message-actions">
+            <button class="secondary" data-action="toggle-replies" type="button">展开回复</button>
+          </div>
+          <div class="inline-replies" hidden></div>
+          <form class="reply-form" hidden>
+            <label for="reply-${escapeHtml(message.public_id)}">匿名回复</label>
+            <textarea id="reply-${escapeHtml(message.public_id)}" maxlength="500" placeholder="写一句回复。" required></textarea>
+            <div class="form-row">
+              <span class="small">最多 500 字</span>
+              <button type="submit">发送回复</button>
+            </div>
+          </form>
+        </article>
+      `
+    )
+    .join("");
+}
+
+async function handlePublicMessageClick(event) {
+  const button = event.target.closest("button[data-action]");
+  if (!button) return;
+
+  const card = button.closest("[data-message-id]");
+  const messageId = card.dataset.messageId;
+
+  if (button.dataset.action === "toggle-replies") {
+    const replies = card.querySelector(".inline-replies");
+    const form = card.querySelector(".reply-form");
+    const shouldOpen = replies.hidden;
+
+    replies.hidden = !shouldOpen;
+    form.hidden = !shouldOpen;
+    button.textContent = shouldOpen ? "收起回复" : "展开回复";
+
+    if (shouldOpen) await loadPublicReplies(messageId, replies);
+  }
+}
+
+async function loadPublicReplies(messageId, container) {
+  container.innerHTML = '<p class="muted">正在加载回复...</p>';
+  const { data, error } = await state.client.rpc("get_public_message_replies", {
+    message_public_id_value: messageId
+  });
+
+  if (error) {
+    container.innerHTML = `<p class="muted">${escapeHtml(error.message)}</p>`;
+    return;
+  }
+
+  if (!data?.length) {
+    container.innerHTML = '<p class="muted">还没有回复。</p>';
+    return;
+  }
+
+  container.innerHTML = data
+    .map(
+      (reply) => `
+        <div class="inline-reply">
+          <p class="reply-meta">${formatDate(reply.created_at)}</p>
+          <p>${escapeHtml(reply.reply_text)}</p>
+        </div>
+      `
+    )
+    .join("");
+}
+
+async function submitPublicReply(event) {
+  event.preventDefault();
+  if (!state.client) return setStatus("Supabase 尚未配置。", true);
+
+  const form = event.target;
+  const card = form.closest("[data-message-id]");
+  const messageId = card.dataset.messageId;
+  const textarea = form.querySelector("textarea");
+  const text = normalizeText(textarea.value);
+  const validation = validateText(text, 1, 500);
+  if (!validation.ok) return setStatus(validation.message, true);
+
+  await withBusy(form, async () => {
+    const { error } = await state.client.rpc("submit_public_message_reply", {
+      message_public_id_value: messageId,
+      reply_body: text
+    });
+
+    if (error) throw error;
+    textarea.value = "";
+    setStatus("回复已发送。");
+    await loadPublicReplies(messageId, card.querySelector(".inline-replies"));
+    await loadPublicMessages();
+  });
+}
+
 async function submitQuestion(event) {
   event.preventDefault();
   if (!state.client) return setStatus("Supabase 尚未配置。", true);
@@ -156,10 +314,19 @@ async function submitQuestion(event) {
   const tokenHash = await sha256(token);
 
   await withBusy(questionForm, async () => {
-    const { error } = await state.client.rpc("submit_question", {
+    let { error } = await state.client.rpc("submit_question", {
       question_body: text,
-      claim_token_hash_value: tokenHash
+      claim_token_hash_value: tokenHash,
+      allow_public_value: questionPublicConsent.checked
     });
+
+    if (isMissingRpc(error)) {
+      const fallback = await state.client.rpc("submit_question", {
+        question_body: text,
+        claim_token_hash_value: tokenHash
+      });
+      error = fallback.error;
+    }
 
     if (error) throw error;
 
@@ -171,7 +338,7 @@ async function submitQuestion(event) {
     claimResult.hidden = false;
     questionForm.reset();
     updateAllCounters();
-    setStatus("问题已经放进漂流瓶。请保存私人链接。");
+    setStatus("问题已保存。请保存私人链接。");
   });
 }
 
@@ -179,30 +346,46 @@ async function loadRandomQuestion() {
   if (!state.client) return setStatus("Supabase 尚未配置。", true);
 
   await withBusy(loadQuestionButton, async () => {
-    const { data, error } = await state.client.rpc("get_random_question", {
-      answer_limit: Number(config.maxAnswersPerQuestion || 5)
+    const recentIds = getRecentQuestionIds();
+    let { data, error } = await state.client.rpc("get_random_question", {
+      answer_limit: Number(config.maxAnswersPerQuestion || 5),
+      excluded_public_ids: recentIds
     });
+
+    if (isMissingRpc(error)) {
+      const fallback = await state.client.rpc("get_random_question", {
+        answer_limit: Number(config.maxAnswersPerQuestion || 5)
+      });
+      data = fallback.data;
+      error = fallback.error;
+    }
 
     if (error) throw error;
     state.currentQuestion = data?.[0] || null;
 
+    if (!state.currentQuestion && recentIds.length) {
+      clearRecentQuestionIds();
+      return loadRandomQuestion();
+    }
+
     if (!state.currentQuestion) {
       randomQuestionCard.innerHTML =
-        '<p class="muted">暂时没有可回答的问题。过一会儿再来看看。</p>';
+        '<p class="muted">暂时没有可回答的问题。稍后再试。</p>';
       answerForm.hidden = true;
       skipQuestionButton.hidden = true;
       return;
     }
 
+    rememberQuestionId(state.currentQuestion.public_id);
     randomQuestionCard.innerHTML = `
-      <p class="reply-meta">一个匿名问题</p>
+      <p class="reply-meta">一个匿名问题 · ${Number(state.currentQuestion.answer_count || 0)} 条回复</p>
       <p>${escapeHtml(state.currentQuestion.question_text)}</p>
     `;
     answerForm.hidden = false;
     skipQuestionButton.hidden = false;
     answerText.value = "";
     updateAllCounters();
-    setStatus("抽到一个问题。");
+    setStatus("已抽取一个问题。");
   });
 }
 
@@ -216,20 +399,29 @@ async function submitAnswer(event) {
   if (!validation.ok) return setStatus(validation.message, true);
 
   await withBusy(answerForm, async () => {
-    const { error } = await state.client.rpc("submit_answer", {
+    let { error } = await state.client.rpc("submit_answer", {
       question_public_id_value: state.currentQuestion.public_id,
-      answer_body: text
+      answer_body: text,
+      allow_public_value: answerPublicConsent.checked
     });
+
+    if (isMissingRpc(error)) {
+      const fallback = await state.client.rpc("submit_answer", {
+        question_public_id_value: state.currentQuestion.public_id,
+        answer_body: text
+      });
+      error = fallback.error;
+    }
 
     if (error) throw error;
 
     answerForm.hidden = true;
     state.currentQuestion = null;
     randomQuestionCard.innerHTML =
-      '<p class="muted">回答已经送出。你可以再抽一个问题。</p>';
+      '<p class="muted">回答已发送。你可以再抽一个问题。</p>';
     answerText.value = "";
     updateAllCounters();
-    setStatus("谢谢，你的回答已经保存。");
+    setStatus("回答已保存。");
   });
 }
 
@@ -289,7 +481,7 @@ async function copyClaim() {
   if (!claimLink.value) return;
   try {
     await navigator.clipboard.writeText(claimLink.value);
-    setStatus("私人链接已复制。");
+    setStatus("链接已复制。");
   } catch {
     claimLink.select();
     setStatus("已选中私人链接，可以手动复制。");
@@ -307,6 +499,14 @@ function validateText(text, min, max) {
     return { ok: false, message: "内容像广告或骚扰信息，请修改后再提交。" };
   }
   return { ok: true };
+}
+
+function isMissingRpc(error) {
+  return Boolean(
+    error &&
+      (error.message?.includes("Could not find the function") ||
+        error.code === "PGRST202")
+  );
 }
 
 function normalizeText(text) {
@@ -342,6 +542,26 @@ function extractToken(value) {
   }
 }
 
+function getRecentQuestionIds() {
+  try {
+    return JSON.parse(localStorage.getItem(RECENT_QUESTIONS_KEY) || "[]");
+  } catch {
+    return [];
+  }
+}
+
+function rememberQuestionId(publicId) {
+  const nextIds = [
+    publicId,
+    ...getRecentQuestionIds().filter((id) => id !== publicId)
+  ].slice(0, MAX_RECENT_QUESTIONS);
+  localStorage.setItem(RECENT_QUESTIONS_KEY, JSON.stringify(nextIds));
+}
+
+function clearRecentQuestionIds() {
+  localStorage.removeItem(RECENT_QUESTIONS_KEY);
+}
+
 async function withBusy(element, task) {
   const buttons = [...element.querySelectorAll?.("button"), element].filter(
     (item) => item?.tagName === "BUTTON"
@@ -371,8 +591,18 @@ function setStatus(message, isError = false) {
   statusEl.classList.toggle("is-error", isError);
 }
 
+function formatDate(value) {
+  if (!value) return "刚刚";
+  return new Intl.DateTimeFormat("zh-Hans", {
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit"
+  }).format(new Date(value));
+}
+
 function escapeHtml(value) {
-  return value.replace(/[&<>"']/g, (char) => {
+  return String(value).replace(/[&<>"']/g, (char) => {
     return {
       "&": "&amp;",
       "<": "&lt;",

@@ -3,28 +3,29 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>问题漂流瓶</title>
+    <title>匿名留言瓶</title>
     <meta
       name="description"
-      content="一个极简匿名问题漂流瓶：留下问题，回答陌生人的问题，用私人链接回来查看回复。"
+      content="一个匿名留言网站：公开短消息、匿名回复、问题漂流瓶。"
     />
     <link rel="stylesheet" href="./styles.css" />
   </head>
   <body>
     <main class="shell">
       <header class="hero">
-        <p class="eyebrow">匿名文字互动实验</p>
-        <h1>问题漂流瓶</h1>
+        <p class="eyebrow">匿名留言 · 问题漂流瓶</p>
+        <h1>匿名留言瓶</h1>
         <p class="intro">
-          写下一个没有署名的问题。之后，某个路过的人可以匿名回答它。
-          你只需要保存一条私人链接，回来时就能看见回复。
+          可以匿名发一条短留言，也可以留下问题等别人回答。
+          不需要账号，也不会显示名字。
         </p>
       </header>
 
       <nav class="actions" aria-label="主要操作">
+        <button class="action-button" data-view="board" type="button">留言板</button>
         <button class="action-button" data-view="ask" type="button">留下问题</button>
         <button class="action-button" data-view="answer" type="button">回答陌生人</button>
-        <button class="action-button" data-view="check" type="button">查看我的回复</button>
+        <button class="action-button" data-view="check" type="button">查看回复</button>
       </nav>
 
       <section class="notice" aria-label="隐私提醒">
@@ -34,10 +35,40 @@
         </p>
       </section>
 
-      <section class="panel is-active" id="ask" aria-labelledby="ask-title">
+      <section class="panel is-active" id="board" aria-labelledby="board-title">
+        <div class="section-heading">
+          <h2 id="board-title">公共留言板</h2>
+          <p>公开显示的匿名短消息。可以发问、打招呼，或说一点近况。</p>
+        </div>
+
+        <form id="public-message-form" class="form compact-form">
+          <label for="public-message-text">公开匿名留言</label>
+          <textarea
+            id="public-message-text"
+            maxlength="280"
+            placeholder="例如：有没有人也在等一个消息？"
+            required
+          ></textarea>
+          <div class="form-row">
+            <span class="counter" data-counter-for="public-message-text">0 / 280</span>
+            <button type="submit">发布</button>
+          </div>
+        </form>
+
+        <div class="section-toolbar">
+          <p class="muted">最新留言</p>
+          <button id="refresh-messages" class="secondary" type="button">刷新</button>
+        </div>
+
+        <div class="message-list" id="public-message-list" aria-live="polite">
+          <article class="empty-state">还没有留言。你可以先发一条。</article>
+        </div>
+      </section>
+
+      <section class="panel" id="ask" aria-labelledby="ask-title">
         <div class="section-heading">
           <h2 id="ask-title">留下一个问题</h2>
-          <p>问题会被随机递给后来的访客。每个问题最多显示若干条回复。</p>
+          <p>把一个问题留给随机路过的人。保存链接后可以回来查看回复。</p>
         </div>
 
         <form id="question-form" class="form">
@@ -45,9 +76,15 @@
           <textarea
             id="question-text"
             maxlength="600"
-            placeholder="例如：最近有没有一件小事，让你觉得生活还不错？"
+            placeholder="例如：遇到这种情况，你会怎么想？"
             required
           ></textarea>
+          <label class="check-line" for="question-public-consent">
+            <input id="question-public-consent" type="checkbox" />
+            <span>
+              如果有人回答，且对方也同意，这组匿名问答可以公开显示。
+            </span>
+          </label>
           <div class="form-row">
             <span class="counter" data-counter-for="question-text">0 / 600</span>
             <button type="submit">生成私人链接</button>
@@ -55,14 +92,14 @@
         </form>
 
         <div class="result" id="claim-result" hidden>
-          <h3>请保存这条私人链接</h3>
-          <p>以后只有通过这条链接或 token，才能查看这个问题收到的回复。</p>
+          <h3>保存这个私人链接</h3>
+          <p>以后用这条链接或 token 查看这个问题的回复。</p>
           <div class="copy-box">
             <input id="claim-link" readonly />
             <button id="copy-claim-link" type="button">复制</button>
           </div>
           <p class="small">
-            如果链接丢失，第一版不会帮你找回，因为这里没有账号系统。
+            链接丢了就无法找回，因为这里没有账号系统。
           </p>
         </div>
       </section>
@@ -70,7 +107,7 @@
       <section class="panel" id="answer" aria-labelledby="answer-title">
         <div class="section-heading">
           <h2 id="answer-title">回答一个陌生问题</h2>
-          <p>系统会随机拿出一个还缺少回复的问题。你不需要署名。</p>
+          <p>抽一个别人留下的问题。回答可以很短。</p>
         </div>
 
         <div class="question-card" id="random-question-card">
@@ -87,12 +124,18 @@
           <textarea
             id="answer-text"
             maxlength="1000"
-            placeholder="写给这个问题的人。温柔一点，真实一点。"
+            placeholder="写你的回答。"
             required
           ></textarea>
+          <label class="check-line" for="answer-public-consent">
+            <input id="answer-public-consent" type="checkbox" />
+            <span>
+              如果提问者也同意，这组匿名问答可以公开显示。
+            </span>
+          </label>
           <div class="form-row">
             <span class="counter" data-counter-for="answer-text">0 / 1000</span>
-            <button type="submit">送出回答</button>
+            <button type="submit">发送回答</button>
           </div>
         </form>
       </section>
@@ -100,7 +143,7 @@
       <section class="panel" id="check" aria-labelledby="check-title">
         <div class="section-heading">
           <h2 id="check-title">查看我的回复</h2>
-          <p>粘贴你的私人链接，或直接输入链接末尾的 token。</p>
+          <p>粘贴私人链接，或输入链接末尾的 token。</p>
         </div>
 
         <form id="check-form" class="form">

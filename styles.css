@@ -1,29 +1,55 @@
 :root {
-  color-scheme: light;
-  --bg: #f7f4ee;
-  --paper: #fffdf8;
-  --ink: #202020;
-  --muted: #69645c;
-  --line: #d9d0c2;
-  --accent: #2f6f73;
-  --accent-dark: #1f5154;
-  --danger: #9f3a38;
-  --shadow: 0 16px 42px rgba(42, 35, 26, 0.08);
+  color-scheme: dark;
+  --bg: #07080d;
+  --bg-soft: #0d1018;
+  --panel: rgba(16, 19, 29, 0.78);
+  --panel-solid: #111521;
+  --ink: #f1eee7;
+  --muted: #a9a195;
+  --dim: #756f68;
+  --line: rgba(241, 238, 231, 0.13);
+  --line-bright: rgba(241, 238, 231, 0.22);
+  --accent: #b9a16a;
+  --accent-soft: rgba(185, 161, 106, 0.16);
+  --glow: rgba(139, 184, 214, 0.16);
+  --danger: #ff9a8c;
+  --shadow: 0 24px 70px rgba(0, 0, 0, 0.38);
 }
 
 * {
   box-sizing: border-box;
 }
 
+html {
+  background: var(--bg);
+}
+
 body {
   margin: 0;
   min-height: 100vh;
-  background: var(--bg);
+  background:
+    radial-gradient(circle at 18% 12%, rgba(93, 126, 157, 0.22), transparent 34rem),
+    radial-gradient(circle at 88% 0%, rgba(185, 161, 106, 0.14), transparent 28rem),
+    linear-gradient(180deg, #06070b 0%, #0c0e15 48%, #07080d 100%);
   color: var(--ink);
   font-family:
     ui-serif, "Songti SC", "Noto Serif CJK SC", "Source Han Serif SC",
     Georgia, serif;
-  line-height: 1.65;
+  line-height: 1.68;
+}
+
+body::before {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  content: "";
+  opacity: 0.18;
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.025) 1px, transparent 1px);
+  background-size: 3px 3px, 5px 5px;
+  mix-blend-mode: screen;
 }
 
 button,
@@ -33,19 +59,19 @@ textarea {
 }
 
 .shell {
-  width: min(860px, calc(100% - 32px));
+  width: min(980px, calc(100% - 28px));
   margin: 0 auto;
-  padding: 48px 0 56px;
+  padding: 34px 0 56px;
 }
 
 .hero {
-  padding: 24px 0 12px;
+  padding: 20px 0 16px;
 }
 
 .eyebrow {
   margin: 0 0 10px;
-  color: var(--accent-dark);
-  font-size: 0.9rem;
+  color: var(--accent);
+  font-size: 0.86rem;
 }
 
 h1,
@@ -56,55 +82,64 @@ p {
 }
 
 h1 {
-  margin-bottom: 14px;
-  font-size: clamp(2.35rem, 7vw, 4.8rem);
-  line-height: 1.05;
+  max-width: 780px;
+  margin-bottom: 16px;
+  font-size: clamp(2.45rem, 11vw, 5.8rem);
+  line-height: 0.98;
   font-weight: 500;
   letter-spacing: 0;
+  text-shadow: 0 0 34px rgba(185, 161, 106, 0.12);
 }
 
 h2 {
   margin-bottom: 8px;
-  font-size: clamp(1.55rem, 4vw, 2.25rem);
+  font-size: clamp(1.5rem, 6vw, 2.45rem);
   font-weight: 500;
   letter-spacing: 0;
 }
 
 h3 {
   margin-bottom: 8px;
-  font-size: 1.1rem;
+  font-size: 1.08rem;
 }
 
 .intro {
   max-width: 680px;
   color: var(--muted);
-  font-size: 1.08rem;
+  font-size: 1.06rem;
 }
 
 .actions {
+  position: sticky;
+  top: 0;
+  z-index: 5;
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 10px;
-  margin: 22px 0 18px;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+  margin: 22px 0 14px;
+  padding: 8px 0;
+  backdrop-filter: blur(16px);
 }
 
 button {
   min-height: 44px;
-  border: 1px solid var(--accent);
+  border: 1px solid var(--line-bright);
   border-radius: 8px;
-  background: var(--accent);
-  color: white;
+  background: rgba(241, 238, 231, 0.08);
+  color: var(--ink);
   cursor: pointer;
-  padding: 10px 16px;
+  padding: 10px 15px;
   transition:
     transform 160ms ease,
     background 160ms ease,
-    border-color 160ms ease;
+    border-color 160ms ease,
+    box-shadow 160ms ease;
 }
 
 button:hover {
-  background: var(--accent-dark);
-  border-color: var(--accent-dark);
+  border-color: rgba(185, 161, 106, 0.45);
+  background: rgba(185, 161, 106, 0.15);
+  box-shadow: 0 0 28px rgba(185, 161, 106, 0.08);
 }
 
 button:active {
@@ -113,39 +148,40 @@ button:active {
 
 button:disabled {
   cursor: wait;
-  opacity: 0.65;
+  opacity: 0.58;
 }
 
 .action-button {
-  background: transparent;
-  color: var(--ink);
-  border-color: var(--line);
+  background: rgba(6, 7, 11, 0.42);
+  color: var(--muted);
 }
 
 .action-button:hover,
 .action-button.is-active {
-  background: var(--ink);
-  border-color: var(--ink);
-  color: white;
+  background: var(--accent-soft);
+  border-color: rgba(185, 161, 106, 0.52);
+  color: var(--ink);
 }
 
 .secondary {
   background: transparent;
-  color: var(--accent-dark);
+  color: var(--muted);
 }
 
 .notice,
 .panel,
 .result,
-.question-card {
+.question-card,
+.message-card,
+.empty-state {
   border: 1px solid var(--line);
   border-radius: 8px;
-  background: var(--paper);
+  background: var(--panel);
   box-shadow: var(--shadow);
 }
 
 .notice {
-  padding: 14px 16px;
+  padding: 13px 15px;
   color: var(--muted);
 }
 
@@ -155,8 +191,9 @@ button:disabled {
 
 .panel {
   display: none;
-  margin-top: 18px;
-  padding: 24px;
+  margin-top: 16px;
+  padding: 22px;
+  backdrop-filter: blur(18px);
 }
 
 .panel.is-active {
@@ -164,11 +201,27 @@ button:disabled {
 }
 
 .section-heading {
-  margin-bottom: 22px;
+  margin-bottom: 20px;
+}
+
+.section-heading p,
+.muted {
+  color: var(--muted);
 }
 
 .section-heading p {
-  color: var(--muted);
+  margin-bottom: 0;
+}
+
+.section-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 24px 0 12px;
+}
+
+.section-toolbar p {
   margin-bottom: 0;
 }
 
@@ -177,9 +230,36 @@ button:disabled {
   gap: 10px;
 }
 
+.compact-form textarea {
+  min-height: 112px;
+}
+
 label {
   color: var(--muted);
-  font-size: 0.95rem;
+  font-size: 0.92rem;
+}
+
+.check-line {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 10px;
+  align-items: start;
+  border: 1px solid rgba(241, 238, 231, 0.1);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.026);
+  padding: 11px 12px;
+}
+
+.check-line input {
+  width: 16px;
+  height: 16px;
+  margin-top: 4px;
+  accent-color: var(--accent);
+}
+
+.check-line span {
+  color: var(--muted);
+  font-size: 0.9rem;
 }
 
 textarea,
@@ -187,10 +267,15 @@ input {
   width: 100%;
   border: 1px solid var(--line);
   border-radius: 8px;
-  background: #fffaf0;
+  background: rgba(4, 6, 10, 0.55);
   color: var(--ink);
   padding: 12px 13px;
   outline: none;
+}
+
+textarea::placeholder,
+input::placeholder {
+  color: rgba(169, 161, 149, 0.68);
 }
 
 textarea {
@@ -200,8 +285,8 @@ textarea {
 
 textarea:focus,
 input:focus {
-  border-color: var(--accent);
-  box-shadow: 0 0 0 3px rgba(47, 111, 115, 0.12);
+  border-color: rgba(185, 161, 106, 0.66);
+  box-shadow: 0 0 0 3px rgba(185, 161, 106, 0.1);
 }
 
 .form-row {
@@ -212,13 +297,12 @@ input:focus {
 }
 
 .counter,
-.small,
-.muted {
-  color: var(--muted);
+.small {
+  color: var(--dim);
 }
 
 .small {
-  font-size: 0.92rem;
+  font-size: 0.9rem;
 }
 
 .result,
@@ -233,22 +317,66 @@ input:focus {
   gap: 8px;
 }
 
+.message-list,
 .replies {
   display: grid;
   gap: 12px;
-  margin-top: 18px;
+  margin-top: 14px;
+}
+
+.message-card,
+.empty-state {
+  padding: 16px;
+}
+
+.message-meta,
+.reply-meta {
+  margin-bottom: 8px;
+  color: var(--dim);
+  font-size: 0.84rem;
+}
+
+.message-body,
+.reply-item p:last-child,
+.question-card p:last-child {
+  margin-bottom: 0;
+  white-space: pre-wrap;
+}
+
+.message-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.inline-replies {
+  display: grid;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.inline-reply {
+  border-left: 2px solid rgba(185, 161, 106, 0.38);
+  padding: 8px 0 8px 12px;
+  color: var(--muted);
+}
+
+.reply-form {
+  display: grid;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.reply-form textarea {
+  min-height: 86px;
 }
 
 .reply-item {
-  border-left: 3px solid var(--accent);
+  border-left: 3px solid rgba(185, 161, 106, 0.52);
   padding: 12px 14px;
-  background: rgba(255, 250, 240, 0.75);
-}
-
-.reply-meta {
-  margin-bottom: 6px;
-  color: var(--muted);
-  font-size: 0.88rem;
+  background: rgba(255, 255, 255, 0.035);
 }
 
 .status {
@@ -261,29 +389,31 @@ input:focus {
   color: var(--danger);
 }
 
-@media (max-width: 680px) {
+@media (max-width: 760px) {
   .shell {
-    width: min(100% - 24px, 860px);
-    padding-top: 28px;
+    width: min(100% - 22px, 980px);
+    padding-top: 24px;
   }
 
   .actions {
-    grid-template-columns: 1fr;
+    grid-template-columns: 1fr 1fr;
   }
 
   .panel {
-    padding: 18px;
+    padding: 16px;
   }
 
   .form-row,
-  .copy-box {
+  .copy-box,
+  .section-toolbar {
     align-items: stretch;
     grid-template-columns: 1fr;
     flex-direction: column;
   }
 
   .form-row button,
-  .copy-box button {
+  .copy-box button,
+  .section-toolbar button {
     width: 100%;
   }
 }
