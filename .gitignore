@@ -3,8 +3,7 @@ node_modules/
 dist/
 *.log
 
-# Local config and environment values
-/config.js
+# Local environment values
 .env
 .env.*
 !.env.example

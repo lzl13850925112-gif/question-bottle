@@ -59,6 +59,16 @@ async function init() {
 }
 
 async function loadConfig() {
+  if (window.SUPABASE_URL && window.SUPABASE_ANON_KEY) {
+    config = {
+      ...config,
+      supabaseUrl: toSupabaseProjectUrl(window.SUPABASE_URL),
+      supabaseAnonKey: window.SUPABASE_ANON_KEY,
+      maxAnswersPerQuestion: config.maxAnswersPerQuestion || 5
+    };
+    window.BOTTLE_CONFIG = config;
+  }
+
   if (isConfigured()) return;
 
   try {
@@ -76,6 +86,10 @@ async function loadConfig() {
   } catch {
     // Local static development can use ignored config.js instead.
   }
+}
+
+function toSupabaseProjectUrl(url) {
+  return url.replace(/\/rest\/v1\/?$/, "");
 }
 
 function isConfigured() {
