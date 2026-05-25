@@ -455,8 +455,8 @@ $$;
 
 -- 14. RPC: read recent public anonymous messages
 CREATE OR REPLACE FUNCTION public.get_public_messages(
-  limit_count integer DEFAULT 30,
-  owner_token_hash_value text DEFAULT NULL
+  limit_count integer,
+  owner_token_hash_value text
 )
 RETURNS TABLE (
   public_id text,
