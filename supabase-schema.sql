@@ -691,63 +691,62 @@ SECURITY DEFINER
 SET search_path = public
 AS $$
 BEGIN
-  IF NOT public.is_sha256_hex(owner_token_hash_value) THEN
+  IF owner_token_hash_value IS NULL
+     OR owner_token_hash_value !~ '^[a-f0-9]{64}$' THEN
     RAISE EXCEPTION 'visitor token hash 格式不正确';
   END IF;
 
   RETURN QUERY
   SELECT
-    'question'::text AS item_type,
-    q.public_id,
-    q.question_text AS body,
-    q.created_at,
-    q.edited_at,
-    count(a.id)::bigint AS reply_count
-  FROM public.questions AS q
-  LEFT JOIN public.answers AS a
-    ON a.question_id = q.id
-  WHERE q.owner_token_hash = owner_token_hash_value
-  GROUP BY q.id, q.public_id, q.question_text, q.created_at, q.edited_at
+    owned_items.item_type,
+    owned_items.public_id,
+    owned_items.body,
+    owned_items.created_at,
+    owned_items.edited_at,
+    owned_items.reply_count
+  FROM (
+    SELECT
+      'question'::text AS item_type,
+      q.public_id,
+      q.question_text AS body,
+      q.created_at,
+      q.edited_at,
+      count(a.id)::bigint AS reply_count
+    FROM public.questions AS q
+    LEFT JOIN public.answers AS a
+      ON a.question_id = q.id
+    WHERE q.owner_token_hash = owner_token_hash_value
+    GROUP BY q.id, q.public_id, q.question_text, q.created_at, q.edited_at
 
-  UNION ALL
+    UNION ALL
 
-  SELECT
-    'answer'::text AS item_type,
-    a.public_id,
-    a.answer_text ||
-      CASE
-        WHEN coalesce(f.asker_liked, false) THEN chr(10) || chr(10) || '提问者喜欢了这条回答。'
-        ELSE ''
-      END ||
-      CASE
-        WHEN f.asker_reply_text IS NOT NULL THEN chr(10) || chr(10) || '提问者回复：' || f.asker_reply_text
-        ELSE ''
-      END AS body,
-    a.created_at,
-    NULL::timestamptz AS edited_at,
-    NULL::bigint AS reply_count
-  FROM public.answers AS a
-  LEFT JOIN public.answer_feedback AS f
-    ON f.answer_id = a.id
-  WHERE a.owner_token_hash = owner_token_hash_value
+    SELECT
+      'answer'::text AS item_type,
+      a.public_id,
+      a.answer_text AS body,
+      a.created_at,
+      NULL::timestamptz AS edited_at,
+      NULL::bigint AS reply_count
+    FROM public.answers AS a
+    WHERE a.owner_token_hash = owner_token_hash_value
 
-  UNION ALL
+    UNION ALL
 
-  SELECT
-    'public_message'::text AS item_type,
-    m.public_id,
-    m.message_text AS body,
-    m.created_at,
-    m.edited_at,
-    count(r.id)::bigint AS reply_count
-  FROM public.public_messages AS m
-  LEFT JOIN public.public_message_replies AS r
-    ON r.message_id = m.id
-  WHERE m.owner_token_hash = owner_token_hash_value
-    AND m.message_kind = 'message'
-  GROUP BY m.id, m.public_id, m.message_text, m.created_at, m.edited_at
-
-  ORDER BY created_at DESC;
+    SELECT
+      'public_message'::text AS item_type,
+      m.public_id,
+      m.message_text AS body,
+      m.created_at,
+      m.edited_at,
+      count(r.id)::bigint AS reply_count
+    FROM public.public_messages AS m
+    LEFT JOIN public.public_message_replies AS r
+      ON r.message_id = m.id
+    WHERE m.owner_token_hash = owner_token_hash_value
+      AND m.message_kind = 'message'
+    GROUP BY m.id, m.public_id, m.message_text, m.created_at, m.edited_at
+  ) AS owned_items
+  ORDER BY owned_items.created_at DESC;
 END;
 $$;
 
