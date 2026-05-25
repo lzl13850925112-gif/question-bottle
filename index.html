@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="zh-Hans">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>问题漂流瓶</title>
+    <meta
+      name="description"
+      content="一个极简匿名问题漂流瓶：留下问题，回答陌生人的问题，用私人链接回来查看回复。"
+    />
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <main class="shell">
+      <header class="hero">
+        <p class="eyebrow">匿名文字互动实验</p>
+        <h1>问题漂流瓶</h1>
+        <p class="intro">
+          写下一个没有署名的问题。之后，某个路过的人可以匿名回答它。
+          你只需要保存一条私人链接，回来时就能看见回复。
+        </p>
+      </header>
+
+      <nav class="actions" aria-label="主要操作">
+        <button class="action-button" data-view="ask" type="button">留下问题</button>
+        <button class="action-button" data-view="answer" type="button">回答陌生人</button>
+        <button class="action-button" data-view="check" type="button">查看我的回复</button>
+      </nav>
+
+      <section class="notice" aria-label="隐私提醒">
+        <p>
+          默认不需要姓名、邮箱、手机号或账号。请不要提交敏感个人信息。
+          这是社交意义上的匿名，不是加密匿名。
+        </p>
+      </section>
+
+      <section class="panel is-active" id="ask" aria-labelledby="ask-title">
+        <div class="section-heading">
+          <h2 id="ask-title">留下一个问题</h2>
+          <p>问题会被随机递给后来的访客。每个问题最多显示若干条回复。</p>
+        </div>
+
+        <form id="question-form" class="form">
+          <label for="question-text">你的问题</label>
+          <textarea
+            id="question-text"
+            maxlength="600"
+            placeholder="例如：最近有没有一件小事，让你觉得生活还不错？"
+            required
+          ></textarea>
+          <div class="form-row">
+            <span class="counter" data-counter-for="question-text">0 / 600</span>
+            <button type="submit">生成私人链接</button>
+          </div>
+        </form>
+
+        <div class="result" id="claim-result" hidden>
+          <h3>请保存这条私人链接</h3>
+          <p>以后只有通过这条链接或 token，才能查看这个问题收到的回复。</p>
+          <div class="copy-box">
+            <input id="claim-link" readonly />
+            <button id="copy-claim-link" type="button">复制</button>
+          </div>
+          <p class="small">
+            如果链接丢失，第一版不会帮你找回，因为这里没有账号系统。
+          </p>
+        </div>
+      </section>
+
+      <section class="panel" id="answer" aria-labelledby="answer-title">
+        <div class="section-heading">
+          <h2 id="answer-title">回答一个陌生问题</h2>
+          <p>系统会随机拿出一个还缺少回复的问题。你不需要署名。</p>
+        </div>
+
+        <div class="question-card" id="random-question-card">
+          <p class="muted">点击下面的按钮抽取一个问题。</p>
+        </div>
+
+        <div class="form-row">
+          <button id="load-question" type="button">抽一个问题</button>
+          <button id="skip-question" class="secondary" type="button" hidden>换一个</button>
+        </div>
+
+        <form id="answer-form" class="form" hidden>
+          <label for="answer-text">你的匿名回答</label>
+          <textarea
+            id="answer-text"
+            maxlength="1000"
+            placeholder="写给这个问题的人。温柔一点，真实一点。"
+            required
+          ></textarea>
+          <div class="form-row">
+            <span class="counter" data-counter-for="answer-text">0 / 1000</span>
+            <button type="submit">送出回答</button>
+          </div>
+        </form>
+      </section>
+
+      <section class="panel" id="check" aria-labelledby="check-title">
+        <div class="section-heading">
+          <h2 id="check-title">查看我的回复</h2>
+          <p>粘贴你的私人链接，或直接输入链接末尾的 token。</p>
+        </div>
+
+        <form id="check-form" class="form">
+          <label for="claim-token">私人链接或 token</label>
+          <input
+            id="claim-token"
+            autocomplete="off"
+            placeholder="例如：https://.../?token=abc 或 abc"
+            required
+          />
+          <div class="form-row">
+            <span></span>
+            <button type="submit">查看回复</button>
+          </div>
+        </form>
+
+        <div class="replies" id="reply-list" aria-live="polite"></div>
+      </section>
+
+      <p class="status" id="status" role="status" aria-live="polite"></p>
+    </main>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="./config.js"></script>
+    <script src="./app.js"></script>
+  </body>
+</html>

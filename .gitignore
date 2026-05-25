@@ -1,0 +1,13 @@
+.DS_Store
+node_modules/
+dist/
+*.log
+
+# Local config and environment values
+/config.js
+.env
+.env.*
+!.env.example
+
+# Vercel local metadata
+.vercel/
