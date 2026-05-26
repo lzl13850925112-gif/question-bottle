@@ -370,6 +370,48 @@ BEGIN
 END;
 $$;
 
+-- 11a. RPC: recover replies for a question owned by this browser token
+CREATE OR REPLACE FUNCTION public.get_my_question_replies(
+  owner_token_hash_value text,
+  question_public_id_value text
+)
+RETURNS TABLE (
+  question_text text,
+  answer_text text,
+  answered_at timestamptz,
+  answer_public_id text,
+  asker_liked boolean,
+  asker_reply_text text
+)
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+BEGIN
+  IF owner_token_hash_value IS NULL
+     OR owner_token_hash_value !~ '^[a-f0-9]{64}$' THEN
+    RAISE EXCEPTION 'visitor token hash 格式不正确';
+  END IF;
+
+  RETURN QUERY
+  SELECT
+    q.question_text,
+    a.answer_text,
+    a.created_at AS answered_at,
+    a.public_id AS answer_public_id,
+    coalesce(f.asker_liked, false) AS asker_liked,
+    f.asker_reply_text
+  FROM public.questions AS q
+  LEFT JOIN public.answers AS a
+    ON a.question_id = q.id
+  LEFT JOIN public.answer_feedback AS f
+    ON f.answer_id = a.id
+  WHERE q.public_id = question_public_id_value
+    AND q.owner_token_hash = owner_token_hash_value
+  ORDER BY a.created_at ASC NULLS LAST;
+END;
+$$;
+
 -- 12. RPC: submit a short public anonymous message
 CREATE OR REPLACE FUNCTION public.submit_public_message(
   message_body text,
@@ -923,6 +965,7 @@ GRANT EXECUTE ON FUNCTION public.submit_question(text, text, boolean, text) TO a
 GRANT EXECUTE ON FUNCTION public.get_random_question(integer, text[]) TO anon;
 GRANT EXECUTE ON FUNCTION public.submit_answer(text, text, boolean, text) TO anon;
 GRANT EXECUTE ON FUNCTION public.get_replies_by_token(text) TO anon;
+GRANT EXECUTE ON FUNCTION public.get_my_question_replies(text, text) TO anon;
 GRANT EXECUTE ON FUNCTION public.submit_public_message(text, text) TO anon;
 GRANT EXECUTE ON FUNCTION public.get_public_messages(integer, text) TO anon;
 GRANT EXECUTE ON FUNCTION public.submit_public_message_reply(text, text) TO anon;

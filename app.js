@@ -20,6 +20,7 @@ const RECENT_QUESTIONS_KEY = "questionBottle.recentQuestionIds";
 const VISITOR_TOKEN_KEY = "questionBottle.visitorToken";
 const HIDDEN_PUBLIC_MESSAGES_KEY = "questionBottle.hiddenPublicMessageIds";
 const LOCAL_QUESTION_TOKENS_KEY = "questionBottle.localQuestionTokens";
+const THEME_KEY = "questionBottle.theme";
 const MAX_RECENT_QUESTIONS = 12;
 const PUBLIC_MESSAGE_COLLAPSE_LENGTH = 140;
 const PUBLIC_MESSAGE_FOCUS_MS = 1600;
@@ -111,14 +112,15 @@ const SEED_QUESTIONS = [...new Set(SEED_QUESTION_TEXTS)].map((text, index) => ({
 }));
 
 const SITE_NOTE = {
-  version: "2.5",
-  text: "可以用本设备保留的本地记录，尝试找回旧问题的回复。"
+  version: "3.0",
+  text: "重做了界面层级、主题切换和阅读体验，使用方式保持不变。"
 };
 
 const statusEl = document.querySelector("#status");
 const siteNote = document.querySelector("#site-note");
 const views = [...document.querySelectorAll(".panel")];
 const viewButtons = [...document.querySelectorAll("[data-view]")];
+const themeButtons = [...document.querySelectorAll("[data-theme-choice]")];
 
 const publicMessageForm = document.querySelector("#public-message-form");
 const publicMessageText = document.querySelector("#public-message-text");
@@ -155,6 +157,7 @@ const myContent = document.querySelector("#my-content");
 init();
 
 async function init() {
+  initTheme();
   bindNavigation();
   bindCounters();
   bindForms();
@@ -274,6 +277,26 @@ function bindForms() {
   answerForm.addEventListener("submit", submitAnswer);
   checkForm.addEventListener("submit", checkReplies);
   copyClaimLink.addEventListener("click", copyClaim);
+  themeButtons.forEach((button) => {
+    button.addEventListener("click", () => setTheme(button.dataset.themeChoice));
+  });
+}
+
+function initTheme() {
+  setTheme(localStorage.getItem(THEME_KEY) || "night", false);
+}
+
+function setTheme(theme, shouldPersist = true) {
+  const safeTheme = ["night", "day", "grass", "orange", "ocean", "tree"].includes(
+    theme
+  )
+    ? theme
+    : "night";
+  document.documentElement.dataset.theme = safeTheme;
+  themeButtons.forEach((button) => {
+    button.classList.toggle("is-active", button.dataset.themeChoice === safeTheme);
+  });
+  if (shouldPersist) localStorage.setItem(THEME_KEY, safeTheme);
 }
 
 function openTokenFromUrl() {

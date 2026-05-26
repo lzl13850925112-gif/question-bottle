@@ -11,14 +11,27 @@
     <link rel="stylesheet" href="./styles.css" />
   </head>
   <body>
-    <main class="shell">
+    <main class="app-shell">
+      <aside class="side-rail">
       <header class="hero">
-        <p class="eyebrow">匿名留言 · 问题漂流瓶</p>
-        <h1>匿名留言瓶</h1>
-        <p class="intro">
-          可以匿名发一条短留言，也可以留下问题等别人回答。
-          不需要账号，也不会显示名字。
-        </p>
+        <div class="hero-topline">
+          <p class="eyebrow">匿名留言 · 问题漂流瓶</p>
+          <div class="theme-switcher" aria-label="主题选择">
+            <button class="theme-button" data-theme-choice="night" type="button">夜间</button>
+            <button class="theme-button" data-theme-choice="day" type="button">日间</button>
+            <button class="theme-button" data-theme-choice="grass" type="button">青草</button>
+            <button class="theme-button" data-theme-choice="orange" type="button">橘子</button>
+            <button class="theme-button" data-theme-choice="ocean" type="button">海洋</button>
+            <button class="theme-button" data-theme-choice="tree" type="button">树木</button>
+          </div>
+        </div>
+        <div class="hero-copy">
+          <h1>匿名留言瓶</h1>
+          <p class="intro">
+            可以匿名发一条短留言，也可以留下问题等别人回答。
+            不需要账号，也不会显示名字。
+          </p>
+        </div>
       </header>
 
       <nav class="actions" aria-label="主要操作">
@@ -35,6 +48,9 @@
         </p>
       </section>
       <p class="site-note small" id="site-note" hidden></p>
+      </aside>
+
+      <section class="workspace" aria-label="操作区域">
 
       <section class="panel is-active" id="board" aria-labelledby="board-title">
         <div class="section-heading">
@@ -221,6 +237,7 @@
       </section>
 
       <p class="status" id="status" role="status" aria-live="polite"></p>
+      </section>
     </main>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
