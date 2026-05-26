@@ -4,9 +4,12 @@ const state = {
   currentQuestion: null,
   client: null,
   publicMessages: [],
+  visiblePublicMessages: [],
   publicFilterMode: "default",
   publicSortMode: "newest_first",
   questionPoolFilter: "all",
+  hiddenPublicMessageIds: [],
+  linkedPublicMessageId: "",
   visitorToken: "",
   ownerTokenHash: "",
   currentClaimTokenHash: ""
@@ -14,7 +17,10 @@ const state = {
 
 const RECENT_QUESTIONS_KEY = "questionBottle.recentQuestionIds";
 const VISITOR_TOKEN_KEY = "questionBottle.visitorToken";
+const HIDDEN_PUBLIC_MESSAGES_KEY = "questionBottle.hiddenPublicMessageIds";
 const MAX_RECENT_QUESTIONS = 12;
+const PUBLIC_MESSAGE_COLLAPSE_LENGTH = 140;
+const PUBLIC_MESSAGE_FOCUS_MS = 1600;
 
 const blockedTerms = [
   "spam.example",
@@ -24,129 +30,91 @@ const blockedTerms = [
   "贷款"
 ];
 
-const SEED_QUESTIONS = [
-  {
-    id: "seed-question-001",
-    text: "你最近循环最多的一首歌是什么？",
-    is_seed: true,
-    source: "owner_seed",
-    may_be_ai_generated: true
-  },
-  {
-    id: "seed-question-002",
-    text: "今天有没有发生什么根本不值得发朋友圈、但你记住了的小事？",
-    is_seed: true,
-    source: "owner_seed",
-    may_be_ai_generated: true
-  },
-  {
-    id: "seed-question-003",
-    text: "你最近最常重复的一句话是什么？",
-    is_seed: true,
-    source: "owner_seed",
-    may_be_ai_generated: true
-  },
-  {
-    id: "seed-question-004",
-    text: "最近有没有什么东西在慢慢消耗你？",
-    is_seed: true,
-    source: "owner_seed",
-    may_be_ai_generated: true
-  },
-  {
-    id: "seed-question-005",
-    text: "你最近删掉过什么？",
-    is_seed: true,
-    source: "owner_seed",
-    may_be_ai_generated: true
-  },
-  {
-    id: "seed-question-006",
-    text: "最近一次熬夜，你在干什么？",
-    is_seed: true,
-    source: "owner_seed",
-    may_be_ai_generated: true
-  },
-  {
-    id: "seed-question-007",
-    text: "你现在最不想听到别人对你说什么？",
-    is_seed: true,
-    source: "owner_seed",
-    may_be_ai_generated: true
-  },
-  {
-    id: "seed-question-008",
-    text: "你有没有一个一直没舍得退出的AI聊天框？它对你有什么意义？",
-    is_seed: true,
-    source: "owner_seed",
-    may_be_ai_generated: true
-  },
-  {
-    id: "seed-question-009",
-    text: "最近有没有一句话，你已经想好很久，但一直没发出去？",
-    is_seed: true,
-    source: "owner_seed",
-    may_be_ai_generated: true
-  },
-  {
-    id: "seed-question-010",
-    text: "有没有一个人，你先要恢复联系，现在已经不知道该怎么重新开口？他过的怎么样？",
-    is_seed: true,
-    source: "owner_seed",
-    may_be_ai_generated: true
-  },
-  {
-    id: "seed-question-011",
-    text: "你最近一次突然不想解释了，是因为什么？",
-    is_seed: true,
-    source: "owner_seed",
-    may_be_ai_generated: true
-  },
-  {
-    id: "seed-question-012",
-    text: "最近有没有一个瞬间，让你突然觉得和一个人的关系变了？",
-    is_seed: true,
-    source: "owner_seed",
-    may_be_ai_generated: true
-  },
-  {
-    id: "seed-question-013",
-    text: "有没有谁其实对你很好，但你一直没认真回应过？",
-    is_seed: true,
-    source: "owner_seed",
-    may_be_ai_generated: true
-  },
-  {
-    id: "seed-question-014",
-    text: "有没有一天，你现在回头看，会觉得像分界线？",
-    is_seed: true,
-    source: "owner_seed",
-    may_be_ai_generated: true
-  },
-  {
-    id: "seed-question-015",
-    text: "你最近一次感觉“时间过得太快”是在什么时候？",
-    is_seed: true,
-    source: "owner_seed",
-    may_be_ai_generated: true
-  },
-  {
-    id: "seed-question-016",
-    text: "有没有什么东西，你以前天天接触，现在却突然消失了？",
-    is_seed: true,
-    source: "owner_seed",
-    may_be_ai_generated: true
-  },
-  {
-    id: "seed-question-017",
-    text: "有没有什么事情没人问过你，但你希望被询问？",
-    is_seed: true,
-    source: "owner_seed",
-    may_be_ai_generated: true
-  }
+const SEED_QUESTION_TEXTS = [
+  "你最近循环最多的一首歌是什么？",
+  "今天有没有发生什么根本不值得发朋友圈、但你记住了的小事？",
+  "你最近最常重复的一句话是什么？",
+  "最近有没有什么东西在慢慢消耗你？",
+  "你最近删掉过什么？",
+  "最近一次熬夜，你在干什么？",
+  "你现在最不想听到别人对你说什么？",
+  "你有没有一个一直没舍得退出的AI聊天框？它对你有什么意义？",
+  "最近有没有一句话，你已经想好很久，但一直没发出去？",
+  "有没有一个人，你先要恢复联系，现在已经不知道该怎么重新开口？他过的怎么样？",
+  "你最近一次突然不想解释了，是因为什么？",
+  "最近有没有一个瞬间，让你突然觉得和一个人的关系变了？",
+  "有没有谁其实对你很好，但你一直没认真回应过？",
+  "有没有一天，你现在回头看，会觉得像分界线？",
+  "你最近一次感觉“时间过得太快”是在什么时候？",
+  "有没有什么东西，你以前天天接触，现在却突然消失了？",
+  "有没有什么事情没人问过你，但你希望被询问？",
+  "最近有没有什么事情，你本来以为自己已经不在意了？",
+  "有没有什么话，你现在已经不打算再解释了？",
+  "最近有没有一个瞬间，你突然很想离开现在的生活？",
+  "你最近最不想面对的一件事是什么？",
+  "你最近有没有在哪一瞬间突然很想回到以前？",
+  "如果今天只能留下一句话，你会写什么？",
+  "你最近吃到最好吃的东西是什么？",
+  "最近有没有一首歌突然又重新开始听了？",
+  "你最近一次出门是为了什么？",
+  "你现在最常逃避的一件小事是什么？",
+  "最近有没有一件小事，让你突然心情变好了一点？",
+  "最近有没有什么东西，你一直想整理，但始终没动？",
+  "你最近有没有突然意识到，某段时间已经过去很久了？",
+  "有没有一个地方，你现在经过时还是会下意识看一眼？",
+  "最近有没有什么东西，其实你已经想丢掉很久了？",
+  "你最近最常发呆的时候是在干什么？",
+  "最近有没有什么话，你差一点就说出口了？",
+  "你最近一次真正睡好觉是什么时候？",
+  "有没有什么东西，你以前特别在意，现在已经无所谓了？",
+  "你最近有没有突然很想关掉所有聊天软件？",
+  "有没有什么地方，你一直说想去，但到现在还没去？",
+  "最近有没有什么没有定论的事情，你其实已经知道结果了？",
+  "你对自己高考最后的结果满意吗？",
+  "你高中毕业后的那个暑假，是怎么度过的？",
+  "回想一个离开了你的重要的人，你现在对他有何态度？",
+  "你吃甜粽子还是咸粽子？",
+  "你对AI的依赖程度高吗？",
+  "你下个周末最想做的一件事是什么？",
+  "有没有一个人，你现在已经不想再了解他的消息了？",
+  "有没有什么习惯在你自己都没意识到的时候已经形成了？",
+  "最近有没有什么事情，你其实很想重新来一次？",
+  "你最近有没有在哪一刻突然觉得自己长大了？",
+  "你最近最常重复听到的一句话是什么？",
+  "最近有没有什么事情，你明知道应该做，但一直拖着？",
+  "你最近有没有什么想买但一直没买的东西？",
+  "最近有没有一个瞬间，你突然不想回那个人的消息了？",
+  "你最近最常点的外卖是什么？",
+  "你最近一次睡过头是在什么时候？",
+  "你最近是不是懒得出门？",
+  "你最近一次认真收拾房间或宿舍是什么时候？",
+  "最近有没有什么事情，你拖着拖着就忘了？",
+  "你最近最常打开但其实没什么要看的软件是什么？",
+  "你最近一次突然很困是在干什么？",
+  "最近有没有哪一天，你几乎什么都没干？",
+  "你最近有没有突然特别想吃某样东西？",
+  "你最近最经常在哪个时间点睡觉？",
+  "最近有没有什么事情，本来很担心，后来发现其实没什么？",
+  "你最近最常待的地方是哪里？",
+  "最近有没有什么事情，你原本很期待，后来却没什么感觉了？",
+  "你最近最常一个人待着的时候在干什么？"
 ];
 
+const SEED_QUESTIONS = [...new Set(SEED_QUESTION_TEXTS)].map((text, index) => ({
+  id: `seed-question-${String(index + 1).padStart(3, "0")}`,
+  text,
+  is_seed: true,
+  source: "owner_seed",
+  may_be_ai_generated: true
+}));
+
+const SITE_NOTE = {
+  version: "2.3",
+  text: "添加了一些功能上的细节。"
+};
+
 const statusEl = document.querySelector("#status");
+const siteNote = document.querySelector("#site-note");
 const views = [...document.querySelectorAll(".panel")];
 const viewButtons = [...document.querySelectorAll("[data-view]")];
 
@@ -155,6 +123,8 @@ const publicMessageText = document.querySelector("#public-message-text");
 const publicMessageList = document.querySelector("#public-message-list");
 const publicMessageFilter = document.querySelector("#public-message-filter");
 const publicMessageSort = document.querySelector("#public-message-sort");
+const randomPublicMessageButton = document.querySelector("#random-public-message");
+const restoreHiddenMessagesButton = document.querySelector("#restore-hidden-messages");
 const refreshMessagesButton = document.querySelector("#refresh-messages");
 
 const questionForm = document.querySelector("#question-form");
@@ -186,11 +156,14 @@ async function init() {
   bindNavigation();
   bindCounters();
   bindForms();
+  renderSiteNote();
+  renderSeedQuestionNotice();
   openTokenFromUrl();
+  state.linkedPublicMessageId = getLinkedPublicMessageId();
   await loadConfig();
 
   if (!window.supabase || !isConfigured()) {
-    setStatus("请先配置 Supabase 项目地址和 anon public key。", true);
+    setStatus("服务暂时不可用，请稍后再试。", true);
     return;
   }
 
@@ -201,6 +174,7 @@ async function init() {
 
   state.visitorToken = getVisitorToken();
   state.ownerTokenHash = await sha256(state.visitorToken);
+  state.hiddenPublicMessageIds = getHiddenPublicMessageIds();
   state.client = window.supabase.createClient(
     config.supabaseUrl,
     config.supabaseAnonKey
@@ -282,6 +256,8 @@ function bindForms() {
   publicMessageForm.addEventListener("submit", submitPublicMessage);
   publicMessageFilter?.addEventListener("change", handlePublicFilterChange);
   publicMessageSort?.addEventListener("change", handlePublicSortChange);
+  randomPublicMessageButton?.addEventListener("click", showRandomPublicMessage);
+  restoreHiddenMessagesButton?.addEventListener("click", restoreHiddenPublicMessages);
   refreshMessagesButton.addEventListener("click", loadPublicMessages);
   publicMessageList.addEventListener("click", handlePublicMessageClick);
   publicMessageList.addEventListener("submit", submitPublicReply);
@@ -307,7 +283,7 @@ function openTokenFromUrl() {
 
 async function submitPublicMessage(event) {
   event.preventDefault();
-  if (!state.client) return setStatus("Supabase 尚未配置。", true);
+  if (!state.client) return setStatus("服务暂时不可用，请稍后再试。", true);
 
   const text = normalizeText(publicMessageText.value);
   const validation = validateText(text, 2, 280);
@@ -340,6 +316,7 @@ async function loadPublicMessages() {
     state.publicMessages = data || [];
     renderCurrentPublicMessages();
     setStatus(state.publicMessages.length ? "" : "暂无公开留言。");
+    window.setTimeout(focusLinkedPublicMessage, 0);
   });
 }
 
@@ -354,15 +331,25 @@ function handlePublicSortChange(event) {
 }
 
 function renderCurrentPublicMessages() {
+  const visibleMessages = sortPublicMessages(
+    filterPublicMessages(
+      state.publicMessages.filter((message) => !isPublicMessageHidden(message.public_id)),
+      state.publicFilterMode
+    ),
+    state.publicSortMode
+  );
+  state.visiblePublicMessages = visibleMessages;
+  updateHiddenMessagesControl();
   renderPublicMessages(
-    sortPublicMessages(
-      filterPublicMessages(state.publicMessages, state.publicFilterMode),
-      state.publicSortMode
-    )
+    visibleMessages
   );
 }
 
 function filterPublicMessages(messages, filterMode) {
+  if (filterMode === "unanswered_only") {
+    return messages.filter((message) => Number(message.reply_count || 0) === 0);
+  }
+
   if (filterMode === "related_to_me") {
     return messages.filter((message) => message.owned_by_me || message.liked_by_me);
   }
@@ -381,6 +368,7 @@ function filterPublicMessages(messages, filterMode) {
 function sortPublicMessages(messages, sortMode) {
   const sortedMessages = [...messages];
   const createdAtTime = (message) => new Date(message.created_at || 0).getTime();
+  const lastReplyAtTime = (message) => new Date(message.last_reply_at || 0).getTime();
   const likeCount = (message) => Number(message.like_count || 0);
   const replyCount = (message) => Number(message.reply_count || 0);
   const recommendedScore = (message) => {
@@ -400,6 +388,21 @@ function sortPublicMessages(messages, sortMode) {
     });
   }
 
+  if (sortMode === "recently_replied") {
+    const hasLastReplyAt = sortedMessages.some((message) => message.last_reply_at);
+    if (hasLastReplyAt) {
+      return sortedMessages.sort((a, b) => {
+        const replyTimeDifference = lastReplyAtTime(b) - lastReplyAtTime(a);
+        return replyTimeDifference || createdAtTime(b) - createdAtTime(a);
+      });
+    }
+
+    return sortedMessages.sort((a, b) => {
+      const replyDifference = replyCount(b) - replyCount(a);
+      return replyDifference || createdAtTime(b) - createdAtTime(a);
+    });
+  }
+
   if (sortMode === "codex_recommended") {
     return sortedMessages.sort((a, b) => {
       const scoreDifference = recommendedScore(b) - recommendedScore(a);
@@ -413,36 +416,50 @@ function sortPublicMessages(messages, sortMode) {
 function renderPublicMessages(messages) {
   if (!messages.length) {
     publicMessageList.innerHTML =
-      '<article class="empty-state">还没有留言。你可以先发一条。</article>';
+      '<article class="empty-state">没有符合当前条件的留言。</article>';
     return;
   }
 
-  publicMessageList.innerHTML = messages
-    .map(
-      (message) => `
-        <article class="message-card" data-message-id="${escapeHtml(message.public_id)}">
-          <p class="message-meta">${formatDate(message.created_at)} · ${Number(message.reply_count || 0)} 条回复 · ${Number(message.like_count || 0)} 个喜欢</p>
-          ${message.edited_at ? `<p class="message-meta">已于 ${formatDate(message.edited_at)} 编辑过</p>` : ""}
-          ${message.message_kind === "bottle_qa" ? '<p class="message-meta">公开问答</p>' : ""}
-          <p class="message-body">${escapeHtml(message.message_text)}</p>
-          <div class="message-actions">
-            <button class="secondary mini-button" data-action="like-message" type="button">${message.liked_by_me ? "已喜欢" : "喜欢"}</button>
-            <button class="secondary" data-action="toggle-replies" type="button">展开回复</button>
-            ${message.owned_by_me ? '<button class="secondary mini-button" data-action="edit-message" type="button">编辑</button><button class="secondary mini-button danger-button" data-action="delete-message" type="button">删除</button>' : ""}
-          </div>
-          <div class="inline-replies" hidden></div>
-          <form class="reply-form" hidden>
-            <label for="reply-${escapeHtml(message.public_id)}">匿名回复</label>
-            <textarea id="reply-${escapeHtml(message.public_id)}" maxlength="500" placeholder="写一句回复。" required></textarea>
-            <div class="form-row">
-              <span class="small">最多 500 字</span>
-              <button type="submit">发送回复</button>
-            </div>
-          </form>
-        </article>
-      `
-    )
-    .join("");
+  publicMessageList.innerHTML = messages.map(renderPublicMessageCard).join("");
+}
+
+function renderPublicMessageCard(message) {
+  const body = message.message_text || "";
+  const isLongBody = body.length > PUBLIC_MESSAGE_COLLAPSE_LENGTH;
+  const replyCount = Number(message.reply_count || 0);
+  const likeCount = Number(message.like_count || 0);
+  const messageId = escapeHtml(message.public_id);
+
+  return `
+    <article class="message-card" id="post-${messageId}" data-message-id="${messageId}">
+      <div class="message-topline">
+        <p class="message-meta">${formatDate(message.created_at)}${message.edited_at ? ` · 已编辑` : ""}</p>
+        ${message.message_kind === "bottle_qa" ? '<span class="message-kind">公开问答</span>' : ""}
+      </div>
+      <p class="message-stats">
+        <span class="reply-stat">${replyCount} 条回复</span>
+        <span>${likeCount} 个喜欢</span>
+      </p>
+      <p class="message-body${isLongBody ? " is-collapsed" : ""}">${escapeHtml(body)}</p>
+      ${isLongBody ? '<button class="text-button" data-action="toggle-message-body" type="button">展开全文</button>' : ""}
+      <div class="message-actions">
+        <button class="secondary mini-button" data-action="toggle-replies" type="button">展开回复</button>
+        <button class="secondary mini-button" data-action="like-message" type="button">${message.liked_by_me ? "已喜欢" : "喜欢"}</button>
+        <button class="secondary mini-button" data-action="copy-message-link" type="button">复制链接</button>
+        <button class="secondary mini-button" data-action="hide-message" type="button">隐藏此条</button>
+        ${message.owned_by_me ? '<button class="secondary mini-button" data-action="edit-message" type="button">编辑</button><button class="secondary mini-button danger-button" data-action="delete-message" type="button">删除</button>' : ""}
+      </div>
+      <div class="inline-replies" hidden></div>
+      <form class="reply-form" hidden>
+        <label for="reply-${messageId}">匿名回复</label>
+        <textarea id="reply-${messageId}" maxlength="500" placeholder="写一句回复。" required></textarea>
+        <div class="form-row">
+          <span class="small">最多 500 字</span>
+          <button type="submit">发送回复</button>
+        </div>
+      </form>
+    </article>
+  `;
 }
 
 async function handlePublicMessageClick(event) {
@@ -451,6 +468,10 @@ async function handlePublicMessageClick(event) {
 
   const card = button.closest("[data-message-id]");
   const messageId = card.dataset.messageId;
+
+  if (button.dataset.action === "toggle-message-body") {
+    togglePublicMessageBody(card, button);
+  }
 
   if (button.dataset.action === "toggle-replies") {
     const replies = card.querySelector(".inline-replies");
@@ -468,12 +489,107 @@ async function handlePublicMessageClick(event) {
     await likePublicMessage(messageId);
   }
 
+  if (button.dataset.action === "copy-message-link") {
+    await copyPublicMessageLink(messageId);
+  }
+
+  if (button.dataset.action === "hide-message") {
+    hidePublicMessage(messageId);
+  }
+
   if (button.dataset.action === "edit-message") {
     await editPublicMessage(messageId);
   }
 
   if (button.dataset.action === "delete-message") {
     await deletePublicMessage(messageId);
+  }
+}
+
+function togglePublicMessageBody(card, button) {
+  const body = card.querySelector(".message-body");
+  const isCollapsed = body.classList.toggle("is-collapsed");
+  button.textContent = isCollapsed ? "展开全文" : "收起";
+}
+
+async function copyPublicMessageLink(messageId) {
+  const url = new URL(window.location.href);
+  url.searchParams.delete("token");
+  url.searchParams.set("post", messageId);
+  url.hash = "";
+  const link = url.toString();
+
+  try {
+    await navigator.clipboard.writeText(link);
+    setStatus("链接已复制。");
+  } catch {
+    prompt("复制这条链接", link);
+    setStatus("已生成链接，可手动复制。");
+  }
+}
+
+function hidePublicMessage(messageId) {
+  if (!state.hiddenPublicMessageIds.includes(messageId)) {
+    state.hiddenPublicMessageIds = [...state.hiddenPublicMessageIds, messageId];
+    saveHiddenPublicMessageIds();
+  }
+  renderCurrentPublicMessages();
+  setStatus("已在当前浏览器隐藏这条留言。");
+}
+
+function restoreHiddenPublicMessages() {
+  state.hiddenPublicMessageIds = [];
+  saveHiddenPublicMessageIds();
+  renderCurrentPublicMessages();
+  setStatus("已恢复隐藏的留言。");
+}
+
+function showRandomPublicMessage() {
+  if (!state.visiblePublicMessages.length) {
+    return setStatus("当前没有可查看的留言。", true);
+  }
+
+  const message =
+    state.visiblePublicMessages[
+      Math.floor(Math.random() * state.visiblePublicMessages.length)
+    ];
+  focusPublicMessage(message.public_id);
+}
+
+function focusPublicMessage(messageId) {
+  const card = [...publicMessageList.querySelectorAll("[data-message-id]")].find(
+    (item) => item.dataset.messageId === messageId
+  );
+
+  if (!card) {
+    setStatus("这条留言当前未显示。");
+    return false;
+  }
+
+  card.scrollIntoView({ behavior: "smooth", block: "center" });
+  card.classList.add("is-focused");
+  window.setTimeout(() => {
+    card.classList.remove("is-focused");
+  }, PUBLIC_MESSAGE_FOCUS_MS);
+  return true;
+}
+
+function getLinkedPublicMessageId() {
+  const params = new URLSearchParams(window.location.search);
+  const postId = params.get("post");
+  if (postId) return postId;
+
+  const hash = window.location.hash || "";
+  return hash.startsWith("#post-") ? hash.slice(6) : "";
+}
+
+function focusLinkedPublicMessage() {
+  if (!state.linkedPublicMessageId) return;
+
+  const didFocus = focusPublicMessage(state.linkedPublicMessageId);
+  state.linkedPublicMessageId = "";
+  if (!didFocus) {
+    setStatus("这条留言当前未显示，可调整筛选或恢复隐藏内容。");
   }
 }
 
@@ -553,7 +669,7 @@ async function loadPublicReplies(messageId, container) {
 
 async function submitPublicReply(event) {
   event.preventDefault();
-  if (!state.client) return setStatus("Supabase 尚未配置。", true);
+  if (!state.client) return setStatus("服务暂时不可用，请稍后再试。", true);
 
   const form = event.target;
   const card = form.closest("[data-message-id]");
@@ -579,7 +695,7 @@ async function submitPublicReply(event) {
 
 async function submitQuestion(event) {
   event.preventDefault();
-  if (!state.client) return setStatus("Supabase 尚未配置。", true);
+  if (!state.client) return setStatus("服务暂时不可用，请稍后再试。", true);
 
   const text = normalizeQuestionText(questionText.value);
   const validation = validateText(text, 8, 600);
@@ -619,7 +735,7 @@ async function submitQuestion(event) {
 }
 
 async function loadRandomQuestion() {
-  if (!state.client) return setStatus("Supabase 尚未配置。", true);
+  if (!state.client) return setStatus("服务暂时不可用，请稍后再试。", true);
 
   if (state.questionPoolFilter === "seed_only") {
     loadSeedQuestion();
@@ -715,7 +831,7 @@ function loadSeedQuestion() {
 
 async function submitAnswer(event) {
   event.preventDefault();
-  if (!state.client) return setStatus("Supabase 尚未配置。", true);
+  if (!state.client) return setStatus("服务暂时不可用，请稍后再试。", true);
   if (!state.currentQuestion) return setStatus("请先抽取一个问题。", true);
 
   const text = normalizeText(answerText.value);
@@ -805,7 +921,7 @@ function resetAnswerFormForQuestion() {
 
 async function checkReplies(event) {
   event.preventDefault();
-  if (!state.client) return setStatus("Supabase 尚未配置。", true);
+  if (!state.client) return setStatus("服务暂时不可用，请稍后再试。", true);
 
   const token = extractToken(claimToken.value);
   if (!token) return setStatus("请输入私人链接或 token。", true);
@@ -1018,6 +1134,50 @@ function rememberQuestionId(publicId) {
 
 function clearRecentQuestionIds() {
   localStorage.removeItem(RECENT_QUESTIONS_KEY);
+}
+
+function getHiddenPublicMessageIds() {
+  try {
+    const ids = JSON.parse(localStorage.getItem(HIDDEN_PUBLIC_MESSAGES_KEY) || "[]");
+    return Array.isArray(ids) ? ids.filter(Boolean) : [];
+  } catch {
+    return [];
+  }
+}
+
+function saveHiddenPublicMessageIds() {
+  localStorage.setItem(
+    HIDDEN_PUBLIC_MESSAGES_KEY,
+    JSON.stringify(state.hiddenPublicMessageIds)
+  );
+}
+
+function isPublicMessageHidden(publicId) {
+  return state.hiddenPublicMessageIds.includes(publicId);
+}
+
+function updateHiddenMessagesControl() {
+  if (!restoreHiddenMessagesButton) return;
+
+  const count = state.hiddenPublicMessageIds.length;
+  restoreHiddenMessagesButton.hidden = count === 0;
+  restoreHiddenMessagesButton.textContent = count
+    ? `恢复已隐藏内容（${count}）`
+    : "恢复已隐藏内容";
+}
+
+function renderSiteNote() {
+  if (!siteNote) return;
+
+  siteNote.textContent = `v${SITE_NOTE.version} · ${SITE_NOTE.text}`;
+  siteNote.hidden = false;
+}
+
+function renderSeedQuestionNotice() {
+  if (!seedQuestionNotice) return;
+
+  seedQuestionNotice.textContent =
+    `种子问题会不定期补充。当前 ${SEED_QUESTIONS.length} 个；回答会公开显示在留言板。`;
 }
 
 async function loadMyContent() {

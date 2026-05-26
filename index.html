@@ -34,6 +34,7 @@
           这里不使用账号。其他人不会看到是谁写的内容。网站只用一个保存在你浏览器里的本地 token，帮你管理自己的内容。请不要提交敏感个人信息；托管和数据库服务仍可能有技术日志。
         </p>
       </section>
+      <p class="site-note small" id="site-note" hidden></p>
 
       <section class="panel is-active" id="board" aria-labelledby="board-title">
         <div class="section-heading">
@@ -55,23 +56,37 @@
           </div>
         </form>
 
-        <div class="section-toolbar">
-          <p class="muted">最新留言</p>
-          <label class="small" for="public-message-filter">筛选</label>
-          <select id="public-message-filter" aria-label="留言筛选">
-            <option value="default">全部</option>
-            <option value="related_to_me">和我有关</option>
-            <option value="public_questions">公开问答</option>
-            <option value="message_posts">普通留言</option>
-          </select>
-          <label class="small" for="public-message-sort">排序</label>
-          <select id="public-message-sort" aria-label="留言排序">
-            <option value="newest_first">最新在前</option>
-            <option value="oldest_first">最早在前</option>
-            <option value="most_liked">点赞最多</option>
-            <option value="codex_recommended">系统推荐</option>
-          </select>
-          <button id="refresh-messages" class="secondary" type="button">刷新</button>
+        <div class="section-toolbar board-toolbar">
+          <p class="muted">留言</p>
+          <div class="toolbar-controls">
+            <label class="toolbar-field" for="public-message-filter">
+              <span>筛选</span>
+              <select id="public-message-filter" aria-label="留言筛选">
+                <option value="default">全部</option>
+                <option value="unanswered_only">只看未回复</option>
+                <option value="related_to_me">和我有关</option>
+                <option value="public_questions">公开问答</option>
+                <option value="message_posts">普通留言</option>
+              </select>
+            </label>
+            <label class="toolbar-field" for="public-message-sort">
+              <span>排序</span>
+              <select id="public-message-sort" aria-label="留言排序">
+                <option value="newest_first">最新在前</option>
+                <option value="recently_replied">最近有回应</option>
+                <option value="oldest_first">最早在前</option>
+                <option value="most_liked">点赞最多</option>
+                <option value="codex_recommended">综合排序</option>
+              </select>
+            </label>
+          </div>
+          <div class="toolbar-actions">
+            <button id="random-public-message" class="secondary" type="button">随机看一条</button>
+            <button id="restore-hidden-messages" class="secondary" type="button" hidden>
+              恢复已隐藏内容
+            </button>
+            <button id="refresh-messages" class="secondary" type="button">刷新</button>
+          </div>
         </div>
 
         <div class="message-list" id="public-message-list" aria-live="polite">
@@ -142,7 +157,7 @@
         </div>
 
         <p class="small" id="seed-question-notice" hidden>
-          种子问题的回答会作为公开匿名留言显示在留言板。
+          种子问题会不定期补充；回答会作为公开匿名留言显示在留言板。
         </p>
 
         <div class="form-row">
