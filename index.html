@@ -11,40 +11,65 @@
     <link rel="stylesheet" href="./styles.css" />
   </head>
   <body>
-    <main class="app-shell">
+    <main class="app-shell v5-shell">
       <aside class="side-rail">
       <header class="hero">
         <div class="hero-topline">
-          <p class="eyebrow">匿名留言 · 问题漂流瓶</p>
-          <div class="theme-switcher" aria-label="主题选择">
-            <button class="theme-button" data-theme-choice="night" type="button">夜间</button>
-            <button class="theme-button" data-theme-choice="day" type="button">日间</button>
-            <button class="theme-button" data-theme-choice="grass" type="button">青草</button>
-            <button class="theme-button" data-theme-choice="orange" type="button">橘子</button>
-            <button class="theme-button" data-theme-choice="ocean" type="button">海洋</button>
-            <button class="theme-button" data-theme-choice="tree" type="button">树木</button>
+          <p class="eyebrow" data-i18n="app.eyebrow">匿名留言 · 问题漂流瓶</p>
+          <div class="hero-control-stack">
+            <div class="theme-menu" aria-label="主题选择">
+              <button class="theme-trigger" id="theme-trigger" type="button" aria-haspopup="true" aria-expanded="false" aria-label="主题">
+                <span class="palette-icon" aria-hidden="true"></span>
+                <span class="current-theme-label">夜间</span>
+              </button>
+              <div class="theme-popover" id="theme-popover" hidden>
+                <button class="theme-button" data-theme-choice="night" data-i18n="theme.night" type="button">夜间</button>
+                <button class="theme-button" data-theme-choice="day" data-i18n="theme.day" type="button">日间</button>
+                <button class="theme-button" data-theme-choice="grass" data-i18n="theme.grass" type="button">青草</button>
+                <button class="theme-button" data-theme-choice="orange" data-i18n="theme.orange" type="button">橘子</button>
+                <button class="theme-button" data-theme-choice="ocean" data-i18n="theme.ocean" type="button">海洋</button>
+                <button class="theme-button" data-theme-choice="tree" data-i18n="theme.tree" type="button">树木</button>
+              </div>
+            </div>
+            <div class="language-menu" aria-label="Language">
+              <button class="language-trigger" id="language-trigger" type="button" aria-haspopup="true" aria-expanded="false" aria-label="Language">
+                <span class="globe-icon" aria-hidden="true"></span>
+                <span class="current-language-label">中文</span>
+              </button>
+              <div class="language-popover" id="language-popover" hidden>
+                <button class="language-button" data-language-choice="zh" type="button">中文</button>
+                <button class="language-button" data-language-choice="en" type="button">English</button>
+              </div>
+            </div>
           </div>
         </div>
         <div class="hero-copy">
-          <h1>匿名留言瓶</h1>
-          <p class="intro">
-            可以匿名发一条短留言，也可以留下问题等别人回答。
-            不需要账号，也不会显示名字。
+          <h1 data-i18n="app.title">匿名留言瓶</h1>
+          <p class="intro" data-i18n="app.intro">
+            可以匿名发一条短留言，也可以留下问题等别人回答。这里不需要账号，也不会显示名字。
           </p>
         </div>
       </header>
 
       <nav class="actions" aria-label="主要操作">
-        <button class="action-button" data-view="board" type="button">留言板</button>
-        <button class="action-button" data-view="ask" type="button">留下问题</button>
-        <button class="action-button" data-view="answer" type="button">回答陌生人</button>
-        <button class="action-button" data-view="check" type="button">查看回复</button>
-        <button class="action-button" data-view="mine" type="button">查看我留下的内容</button>
-        <button class="action-button" data-view="feedback" type="button">意见箱</button>
+        <button class="action-button" data-view="board" data-i18n="nav.board" type="button">留言板</button>
+        <button class="action-button" data-view="ask" data-i18n="nav.ask" type="button">留下问题</button>
+        <button class="action-button" data-view="answer" data-i18n="nav.answer" type="button">回答陌生人</button>
+        <button class="action-button" data-view="check" data-i18n="nav.check" type="button">查看回复</button>
+        <button class="action-button" data-view="mine" data-i18n="nav.mine" type="button">查看我留下的内容</button>
+        <button class="action-button" data-view="saved" data-i18n="nav.saved" type="button">本地收藏</button>
+        <button class="action-button" data-view="feedback" data-i18n="nav.feedback" type="button">意见箱</button>
       </nav>
 
+      <button class="guide-entry" id="open-guide" type="button" data-i18n="guide.entry">阅读使用指南</button>
+
+      <section class="local-orbit" aria-label="本地状态">
+        <p id="rhythm-note">正在读取页面节奏。</p>
+        <p id="local-summary">正在整理本地记录。</p>
+      </section>
+
       <section class="notice" aria-label="隐私提醒">
-        <p>
+        <p data-i18n="app.privacy">
           这里不使用账号。其他人不会看到是谁写的内容。网站只用一个保存在你浏览器里的本地 token，帮你管理自己的内容。请不要提交敏感个人信息；托管和数据库服务仍可能有技术日志。
         </p>
       </section>
@@ -52,174 +77,190 @@
       </aside>
 
       <section class="workspace" aria-label="操作区域">
+      <section class="stage-top" aria-label="页面状态">
+        <div>
+          <p class="eyebrow" data-i18n="stage.current">当前空间</p>
+          <p class="stage-title" id="stage-title" data-i18n="nav.board">留言板</p>
+        </div>
+        <div class="stage-actions">
+          <button class="secondary mini-button" id="float-random-message" data-i18n="actions.random" type="button">随机浏览</button>
+          <button class="secondary mini-button" id="resurface-content" data-i18n="actions.resurface" type="button">重新漂流</button>
+          <button class="secondary mini-button" id="quiet-toggle" data-i18n="actions.quiet" type="button">安静模式</button>
+          <button class="secondary mini-button" id="open-translation" data-i18n="actions.translate" type="button">翻译</button>
+        </div>
+      </section>
 
       <section class="panel is-active" id="board" aria-labelledby="board-title">
         <div class="section-heading">
-          <h2 id="board-title">公共留言板</h2>
-          <p>公开显示的匿名短消息。可以发问、打招呼，或说一点近况。</p>
+          <h2 id="board-title" data-i18n="board.title">公共留言板</h2>
+          <p data-i18n="board.description">公开显示的匿名短消息。可以发问、打招呼，或说一点近况。</p>
         </div>
 
         <form id="public-message-form" class="form compact-form">
-          <label for="public-message-text">公开匿名留言</label>
+          <label for="public-message-text" data-i18n="board.inputLabel">公开匿名留言</label>
           <textarea
             id="public-message-text"
             maxlength="280"
             placeholder="例如：有没有人也在等一个消息？"
+            data-i18n-placeholder="board.placeholder"
             required
           ></textarea>
           <div class="form-row">
             <span class="counter" data-counter-for="public-message-text">0 / 280</span>
-            <button type="submit">发布</button>
+            <button type="submit" data-i18n="actions.publish">发布</button>
           </div>
         </form>
 
         <div class="section-toolbar board-toolbar">
-          <p class="muted">留言</p>
+          <p class="muted" data-i18n="board.messages">留言</p>
           <div class="toolbar-controls">
             <label class="toolbar-field" for="public-message-filter">
-              <span>筛选</span>
+              <span data-i18n="controls.filter">筛选</span>
               <select id="public-message-filter" aria-label="留言筛选">
-                <option value="default">全部</option>
-                <option value="unanswered_only">只看未回复</option>
-                <option value="related_to_me">和我有关</option>
-                <option value="public_questions">公开问答</option>
-                <option value="message_posts">普通留言</option>
+                <option value="default" data-i18n="filter.default">全部</option>
+                <option value="unanswered_only" data-i18n="filter.unanswered">只看未回复</option>
+                <option value="related_to_me" data-i18n="filter.related">和我有关</option>
+                <option value="public_questions" data-i18n="filter.questions">公开问答</option>
+                <option value="message_posts" data-i18n="filter.messages">普通留言</option>
               </select>
             </label>
             <label class="toolbar-field" for="public-message-sort">
-              <span>排序</span>
+              <span data-i18n="controls.sort">排序</span>
               <select id="public-message-sort" aria-label="留言排序">
-                <option value="newest_first">最新在前</option>
-                <option value="recently_replied">最近有回应</option>
-                <option value="oldest_first">最早在前</option>
-                <option value="most_liked">点赞最多</option>
-                <option value="codex_recommended">综合排序</option>
+                <option value="newest_first" data-i18n="sort.newest">最新在前</option>
+                <option value="recently_replied" data-i18n="sort.replied">最近有回应</option>
+                <option value="oldest_first" data-i18n="sort.oldest">最早在前</option>
+                <option value="most_liked" data-i18n="sort.liked">点赞最多</option>
+                <option value="codex_recommended" data-i18n="sort.recommended">综合排序</option>
               </select>
             </label>
           </div>
           <div class="toolbar-actions">
-            <button id="random-public-message" class="secondary" type="button">随机看一条</button>
+            <button id="random-public-message" class="secondary" data-i18n="actions.randomOne" type="button">随机看一条</button>
             <button id="restore-hidden-messages" class="secondary" type="button" hidden>
               恢复已隐藏内容
             </button>
-            <button id="refresh-messages" class="secondary" type="button">刷新</button>
+            <button id="refresh-messages" class="secondary" data-i18n="actions.refresh" type="button">刷新</button>
           </div>
         </div>
 
         <div class="message-list" id="public-message-list" aria-live="polite">
-          <article class="empty-state">还没有留言。你可以先发一条。</article>
+          <article class="empty-state" data-i18n="empty.board">还没有留言。你可以先发一条。</article>
         </div>
       </section>
 
       <section class="panel" id="ask" aria-labelledby="ask-title">
         <div class="section-heading">
-          <h2 id="ask-title">留下一个问题</h2>
-          <p>把一个问题留给随机路过的人。保存链接后可以回来查看回复。</p>
+          <h2 id="ask-title" data-i18n="ask.title">留下一个问题</h2>
+          <p data-i18n="ask.description">把一个问题留给随机路过的人。保存链接后可以回来查看回复。</p>
         </div>
 
         <form id="question-form" class="form">
-          <label for="question-text">你的问题</label>
+          <label for="question-text" data-i18n="ask.inputLabel">你的问题</label>
           <textarea
             id="question-text"
             maxlength="600"
             placeholder="例如：遇到这种情况，你会怎么想？"
+            data-i18n-placeholder="ask.placeholder"
             required
           ></textarea>
           <label class="check-line" for="question-public-consent">
             <input id="question-public-consent" type="checkbox" />
             <span>
-              如果有人回答，且对方也同意，这组匿名问答可以公开显示。
+              <span data-i18n="ask.publicConsent">如果有人回答，且对方也同意，这组匿名问答可以公开显示。</span>
             </span>
           </label>
           <div class="form-row">
             <span class="counter" data-counter-for="question-text">0 / 600</span>
-            <button type="submit">生成私人链接</button>
+            <button type="submit" data-i18n="actions.createLink">生成私人链接</button>
           </div>
         </form>
 
         <div class="result" id="claim-result" hidden>
-          <h3>保存这个私人链接</h3>
-          <p>以后用这条链接或 token 查看这个问题的回复。</p>
+          <h3 data-i18n="ask.saveLink">保存这个私人链接</h3>
+          <p data-i18n="ask.saveLinkHint">以后用这条链接或 token 查看这个问题的回复。</p>
           <div class="copy-box">
             <input id="claim-link" readonly />
-            <button id="copy-claim-link" type="button">复制</button>
+            <button id="copy-claim-link" data-i18n="actions.copy" type="button">复制</button>
           </div>
           <p class="small">
-            链接丢了就无法找回，因为这里没有账号系统。
+            <span data-i18n="ask.noAccountHint">链接丢了就无法找回，因为这里没有账号系统。</span>
           </p>
         </div>
       </section>
 
       <section class="panel" id="answer" aria-labelledby="answer-title">
         <div class="section-heading">
-          <h2 id="answer-title">回答一个陌生问题</h2>
-          <p>抽一个别人留下的问题。回答可以很短。</p>
+          <h2 id="answer-title" data-i18n="answer.title">回答一个陌生问题</h2>
+          <p data-i18n="answer.description">抽一个别人留下的问题。回答可以很短。</p>
         </div>
 
         <div class="question-card" id="random-question-card">
-          <p class="muted">点击下面的按钮抽取一个问题。</p>
+          <p class="muted" data-i18n="answer.empty">点击下面的按钮抽取一个问题。</p>
         </div>
 
         <p class="small">
-          没有账号系统，所以问题池里也可能包含你自己投出的匿名问题。抽到了自己的问题，重新抽取即可。
+          <span data-i18n="answer.selfHint">没有账号系统，所以问题池里也可能包含你自己投出的匿名问题。抽到了自己的问题，重新抽取即可。</span>
         </p>
 
         <div class="section-toolbar">
-          <label class="small" for="question-pool-filter">问题池</label>
+          <label class="small" for="question-pool-filter" data-i18n="answer.pool">问题池</label>
           <select id="question-pool-filter" aria-label="问题池筛选">
-            <option value="all">全部问题</option>
-            <option value="seed_only">只看种子问题</option>
-            <option value="non_seed_only">只看用户问题</option>
+            <option value="all" data-i18n="answer.poolAll">全部问题</option>
+            <option value="seed_only" data-i18n="answer.poolSeed">只看种子问题</option>
+            <option value="non_seed_only" data-i18n="answer.poolUser">只看用户问题</option>
           </select>
         </div>
 
         <p class="small" id="seed-question-notice" hidden>
-          种子问题会不定期补充；回答会作为公开匿名留言显示在留言板。
+          <span data-i18n="answer.seedNotice">种子问题会不定期补充；回答会作为公开匿名留言显示在留言板。</span>
         </p>
 
         <div class="form-row">
-          <button id="load-question" type="button">抽一个问题</button>
-          <button id="skip-question" class="secondary" type="button" hidden>换一个</button>
+          <button id="load-question" data-i18n="actions.drawQuestion" type="button">抽一个问题</button>
+          <button id="skip-question" class="secondary" data-i18n="actions.nextQuestion" type="button" hidden>换一个</button>
         </div>
 
         <form id="answer-form" class="form" hidden>
-          <label for="answer-text">你的匿名回答</label>
+          <label for="answer-text" data-i18n="answer.inputLabel">你的匿名回答</label>
           <textarea
             id="answer-text"
             maxlength="1000"
             placeholder="写你的回答。"
+            data-i18n-placeholder="answer.placeholder"
             required
           ></textarea>
           <label class="check-line" for="answer-public-consent">
             <input id="answer-public-consent" type="checkbox" />
             <span id="answer-public-consent-text">
-              如果提问者也同意，这组匿名问答可以公开显示。
+              <span data-i18n="answer.publicConsent">如果提问者也同意，这组匿名问答可以公开显示。</span>
             </span>
           </label>
           <div class="form-row">
             <span class="counter" data-counter-for="answer-text">0 / 1000</span>
-            <button type="submit">发送回答</button>
+            <button type="submit" data-i18n="actions.sendAnswer">发送回答</button>
           </div>
         </form>
       </section>
 
       <section class="panel" id="check" aria-labelledby="check-title">
         <div class="section-heading">
-          <h2 id="check-title">查看我的回复</h2>
-          <p>粘贴私人链接，或输入链接末尾的 token。</p>
+          <h2 id="check-title" data-i18n="check.title">查看我的回复</h2>
+          <p data-i18n="check.description">粘贴私人链接，或输入链接末尾的 token。</p>
         </div>
 
         <form id="check-form" class="form">
-          <label for="claim-token">私人链接或 token</label>
+          <label for="claim-token" data-i18n="check.inputLabel">私人链接或 token</label>
           <input
             id="claim-token"
             autocomplete="off"
             placeholder="例如：https://.../?token=abc 或 abc"
+            data-i18n-placeholder="check.placeholder"
             required
           />
           <div class="form-row">
             <span></span>
-            <button type="submit">查看回复</button>
+            <button type="submit" data-i18n="actions.viewReplies">查看回复</button>
           </div>
         </form>
 
@@ -228,52 +269,133 @@
 
       <section class="panel" id="mine" aria-labelledby="mine-title">
         <div class="section-heading">
-          <h2 id="mine-title">查看我留下的内容</h2>
-          <p>如果当前浏览器保存过本地记录，可以在这里查看自己的问题、回复和留言。</p>
+          <h2 id="mine-title" data-i18n="mine.title">查看我留下的内容</h2>
+          <p data-i18n="mine.description">如果当前浏览器保存过本地记录，可以在这里查看自己的问题、回复和留言。</p>
         </div>
 
         <div class="mine-grid" id="my-content" aria-live="polite">
-          <article class="empty-state">正在读取这个浏览器里的内容。</article>
+          <article class="empty-state" data-i18n="empty.loadingLocal">正在读取这个浏览器里的内容。</article>
+        </div>
+      </section>
+
+      <section class="panel" id="saved" aria-labelledby="saved-title">
+        <div class="section-heading">
+          <h2 id="saved-title" data-i18n="saved.title">本地收藏</h2>
+          <p data-i18n="saved.description">只保存在当前浏览器里的内容。可以稍后重新打开、重新漂流。</p>
+        </div>
+
+        <div class="saved-grid" id="saved-content" aria-live="polite">
+          <article class="empty-state" data-i18n="empty.saved">还没有本地收藏。</article>
         </div>
       </section>
 
       <section class="panel" id="feedback" aria-labelledby="feedback-title">
         <div class="section-heading">
-          <h2 id="feedback-title">意见箱</h2>
-          <p>匿名留下使用反馈、问题或想法。内容只给开发者查看，不会出现在留言板。</p>
+          <h2 id="feedback-title" data-i18n="feedback.title">意见箱</h2>
+          <p data-i18n="feedback.description">匿名留下使用反馈、问题或想法。内容只给开发者查看，不会出现在留言板。</p>
         </div>
 
         <form id="feedback-form" class="form">
           <label class="toolbar-field" for="feedback-kind">
-            <span>类型</span>
+              <span data-i18n="feedback.type">类型</span>
             <select id="feedback-kind" aria-label="意见类型">
-              <option value="feedback">使用反馈</option>
-              <option value="problem">遇到问题</option>
-              <option value="idea">一点想法</option>
-              <option value="other">其他</option>
+              <option value="feedback" data-i18n="feedback.kindFeedback">使用反馈</option>
+              <option value="problem" data-i18n="feedback.kindProblem">遇到问题</option>
+              <option value="idea" data-i18n="feedback.kindIdea">一点想法</option>
+              <option value="other" data-i18n="feedback.kindOther">其他</option>
             </select>
           </label>
-          <label for="feedback-text">内容</label>
+          <label for="feedback-text" data-i18n="feedback.inputLabel">内容</label>
           <textarea
             id="feedback-text"
             maxlength="1000"
             placeholder="写下你遇到的问题，或对这个网站的想法。"
+            data-i18n-placeholder="feedback.placeholder"
             required
           ></textarea>
           <div class="form-row">
             <span class="counter" data-counter-for="feedback-text">0 / 1000</span>
-            <button type="submit">提交</button>
+            <button type="submit" data-i18n="actions.submit">提交</button>
           </div>
         </form>
 
         <p class="small feedback-note">
-          这不是公开评论区，也不是客服系统。请不要留下敏感个人信息。
+          <span data-i18n="feedback.note">这不是公开评论区，也不是客服系统。请不要留下敏感个人信息。</span>
         </p>
       </section>
 
       <p class="status" id="status" role="status" aria-live="polite"></p>
       </section>
     </main>
+
+    <nav class="bottom-dock" aria-label="底部导航">
+      <button class="dock-button" data-view="board" data-i18n="dock.board" type="button">留言</button>
+      <button class="dock-button" data-view="answer" data-i18n="dock.answer" type="button">漂流</button>
+      <button class="dock-button" data-view="ask" data-i18n="dock.ask" type="button">提问</button>
+      <button class="dock-button" data-view="mine" data-i18n="dock.mine" type="button">我的</button>
+      <button class="dock-button" data-view="saved" data-i18n="dock.saved" type="button">收藏</button>
+      <button class="dock-button" data-view="feedback" data-i18n="dock.feedback" type="button">意见</button>
+    </nav>
+
+    <div class="sheet-backdrop" id="guide-sheet" hidden>
+      <section class="floating-sheet" role="dialog" aria-modal="true" aria-labelledby="guide-title">
+        <button class="sheet-close" data-close-sheet type="button" aria-label="关闭">×</button>
+        <p class="eyebrow" data-i18n="guide.eyebrow">使用指南</p>
+        <h2 id="guide-title" data-i18n="guide.title">轻轻使用就好</h2>
+        <div class="guide-steps">
+          <article>
+            <h3 data-i18n="guide.step1Title">留言</h3>
+            <p data-i18n="guide.step1Body">写短消息，公开出现。想稍后再看，可以收藏。</p>
+          </article>
+          <article>
+            <h3 data-i18n="guide.step2Title">漂流</h3>
+            <p data-i18n="guide.step2Body">抽一个问题，回答一句。回答可以很短。</p>
+          </article>
+          <article>
+            <h3 data-i18n="guide.step3Title">我的</h3>
+            <p data-i18n="guide.step3Body">本地记录只在当前浏览器里。没有账号，也不会同步到其他设备。</p>
+          </article>
+          <article>
+            <h3 data-i18n="guide.step4Title">翻译</h3>
+            <p data-i18n="guide.step4Body">现在只是预留入口。不会调用翻译 API，也不会产生额外成本。</p>
+          </article>
+          <article>
+            <h3 data-i18n="guide.step5Title">主题</h3>
+            <p data-i18n="guide.step5Body">左上角的调色板可以切换夜间、日间、青草、橘子、海洋和树木。</p>
+          </article>
+          <article>
+            <h3 data-i18n="guide.step6Title">语言</h3>
+            <p data-i18n="guide.step6Body">地球按钮可以切换中文和 English。选择会保存在当前浏览器。</p>
+          </article>
+          <article>
+            <h3 data-i18n="guide.step7Title">收藏</h3>
+            <p data-i18n="guide.step7Body">看到想稍后再读的内容，可以先收藏；收藏只保存在这台设备里。</p>
+          </article>
+          <article>
+            <h3 data-i18n="guide.step8Title">意见箱</h3>
+            <p data-i18n="guide.step8Body">遇到问题、想提建议，去底部 dock 或左侧菜单里的意见箱。内容只给开发者查看。</p>
+          </article>
+          <article>
+            <h3 data-i18n="guide.step9Title">安静模式</h3>
+            <p data-i18n="guide.step9Body">安静模式会降低页面的提示感和信息密度，让浏览节奏慢一点。</p>
+          </article>
+          <article>
+            <h3 data-i18n="guide.step10Title">桌面端</h3>
+            <p data-i18n="guide.step10Body">桌面端有较多柔和过渡。如果感觉交互反馈慢半拍，请稍等片刻，通常是内容和动效还在完成加载。</p>
+          </article>
+        </div>
+      </section>
+    </div>
+
+    <div class="sheet-backdrop" id="translation-sheet" hidden>
+      <section class="floating-sheet translation-sheet" role="dialog" aria-modal="true" aria-labelledby="translation-title">
+        <button class="sheet-close" data-close-sheet type="button" aria-label="关闭">×</button>
+        <p class="eyebrow" data-i18n="translation.eyebrow">翻译</p>
+        <h2 id="translation-title" data-i18n="translation.title">实时翻译（Beta）</h2>
+        <p data-i18n="translation.developing">开发中</p>
+        <p class="small" data-i18n="translation.wait">敬请期待</p>
+      </section>
+    </div>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="./config.js"></script>

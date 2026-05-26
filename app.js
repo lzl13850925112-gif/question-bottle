@@ -9,6 +9,9 @@ const state = {
   publicSortMode: "newest_first",
   questionPoolFilter: "all",
   hiddenPublicMessageIds: [],
+  savedMessages: {},
+  quietMode: false,
+  language: "zh",
   linkedPublicMessageId: "",
   visitorToken: "",
   hadStoredVisitorToken: false,
@@ -21,6 +24,9 @@ const VISITOR_TOKEN_KEY = "questionBottle.visitorToken";
 const HIDDEN_PUBLIC_MESSAGES_KEY = "questionBottle.hiddenPublicMessageIds";
 const LOCAL_QUESTION_TOKENS_KEY = "questionBottle.localQuestionTokens";
 const LOCAL_QUESTIONS_KEY = "questionBottle.localQuestions";
+const SAVED_MESSAGES_KEY = "questionBottle.savedMessages";
+const QUIET_MODE_KEY = "questionBottle.quietMode";
+const LANGUAGE_KEY = "questionBottle.language";
 const SEEN_QUESTIONS_META_KEY = "questionBottle.seenQuestionMeta";
 const THEME_KEY = "questionBottle.theme";
 const MAX_RECENT_QUESTIONS = 12;
@@ -114,8 +120,341 @@ const SEED_QUESTIONS = [...new Set(SEED_QUESTION_TEXTS)].map((text, index) => ({
 }));
 
 const SITE_NOTE = {
-  version: "4.0",
-  text: "加入意见箱和更连续的本地使用体验。"
+  version: "5.0",
+  textKey: "update.text"
+};
+
+const I18N = {
+  zh: {
+    "app.title": "匿名留言瓶",
+    "app.eyebrow": "匿名留言 · 问题漂流瓶",
+    "app.intro": "可以匿名发一条短留言，也可以留下问题等别人回答。这里不需要账号，也不会显示名字。",
+    "app.privacy": "这里不使用账号。其他人不会看到是谁写的内容。网站只用一个保存在你浏览器里的本地 token，帮你管理自己的内容。请不要提交敏感个人信息；托管和数据库服务仍可能有技术日志。",
+    "update.text": "加入底部 dock、本地收藏、重新漂流和更安静的空间节奏。",
+    "theme.night": "夜间",
+    "theme.day": "日间",
+    "theme.grass": "青草",
+    "theme.orange": "橘子",
+    "theme.ocean": "海洋",
+    "theme.tree": "树木",
+    "nav.board": "留言板",
+    "nav.ask": "留下问题",
+    "nav.answer": "回答陌生人",
+    "nav.check": "查看回复",
+    "nav.mine": "查看我留下的内容",
+    "nav.saved": "本地收藏",
+    "nav.feedback": "意见箱",
+    "dock.board": "留言",
+    "dock.answer": "漂流",
+    "dock.ask": "提问",
+    "dock.mine": "我的",
+    "dock.saved": "收藏",
+    "dock.feedback": "意见",
+    "stage.current": "当前空间",
+    "actions.random": "随机浏览",
+    "actions.resurface": "重新漂流",
+    "actions.quiet": "安静模式",
+    "actions.restore": "恢复节奏",
+    "actions.translate": "翻译",
+    "actions.publish": "发布",
+    "actions.randomOne": "随机看一条",
+    "actions.refresh": "刷新",
+    "actions.createLink": "生成私人链接",
+    "actions.copy": "复制",
+    "actions.drawQuestion": "抽一个问题",
+    "actions.nextQuestion": "换一个",
+    "actions.sendAnswer": "发送回答",
+    "actions.viewReplies": "查看回复",
+    "actions.submit": "提交",
+    "actions.save": "收藏",
+    "actions.saved": "已收藏",
+    "actions.like": "喜欢",
+    "actions.liked": "已喜欢",
+    "actions.replyOpen": "展开回复",
+    "actions.replyClose": "收起回复",
+    "actions.copyLink": "复制链接",
+    "actions.hide": "隐藏此条",
+    "actions.edit": "编辑",
+    "actions.delete": "删除",
+    "actions.expand": "展开全文",
+    "actions.collapse": "收起",
+    "actions.openSaved": "重新打开",
+    "actions.removeSaved": "取消收藏",
+    "kind.qa": "公开问答",
+    "kind.saved": "本地收藏",
+    "board.title": "公共留言板",
+    "board.description": "公开显示的匿名短消息。可以发问、打招呼，或说一点近况。",
+    "board.inputLabel": "公开匿名留言",
+    "board.placeholder": "例如：有没有人也在等一个消息？",
+    "board.messages": "留言",
+    "controls.filter": "筛选",
+    "controls.sort": "排序",
+    "filter.default": "全部",
+    "filter.unanswered": "只看未回复",
+    "filter.related": "和我有关",
+    "filter.questions": "公开问答",
+    "filter.messages": "普通留言",
+    "sort.newest": "最新在前",
+    "sort.replied": "最近有回应",
+    "sort.oldest": "最早在前",
+    "sort.liked": "点赞最多",
+    "sort.recommended": "综合排序",
+    "ask.title": "留下一个问题",
+    "ask.description": "把一个问题留给随机路过的人。保存链接后可以回来查看回复。",
+    "ask.inputLabel": "你的问题",
+    "ask.placeholder": "例如：遇到这种情况，你会怎么想？",
+    "ask.publicConsent": "如果有人回答，且对方也同意，这组匿名问答可以公开显示。",
+    "ask.saveLink": "保存这个私人链接",
+    "ask.saveLinkHint": "以后用这条链接或 token 查看这个问题的回复。",
+    "ask.noAccountHint": "链接丢了就无法找回，因为这里没有账号系统。",
+    "answer.title": "回答一个陌生问题",
+    "answer.description": "抽一个别人留下的问题。回答可以很短。",
+    "answer.empty": "点击下面的按钮抽取一个问题。",
+    "answer.selfHint": "没有账号系统，所以问题池里也可能包含你自己投出的匿名问题。抽到了自己的问题，重新抽取即可。",
+    "answer.pool": "问题池",
+    "answer.poolAll": "全部问题",
+    "answer.poolSeed": "只看种子问题",
+    "answer.poolUser": "只看用户问题",
+    "answer.seedNotice": "种子问题会不定期补充；回答会作为公开匿名留言显示在留言板。",
+    "answer.inputLabel": "你的匿名回答",
+    "answer.placeholder": "写你的回答。",
+    "answer.publicConsent": "如果提问者也同意，这组匿名问答可以公开显示。",
+    "check.title": "查看我的回复",
+    "check.description": "粘贴私人链接，或输入链接末尾的 token。",
+    "check.inputLabel": "私人链接或 token",
+    "check.placeholder": "例如：https://.../?token=abc 或 abc",
+    "mine.title": "查看我留下的内容",
+    "mine.description": "如果当前浏览器保存过本地记录，可以在这里查看自己的问题、回复和留言。",
+    "saved.title": "本地收藏",
+    "saved.description": "只保存在当前浏览器里的内容。可以稍后重新打开、重新漂流。",
+    "feedback.title": "意见箱",
+    "feedback.description": "匿名留下使用反馈、问题或想法。内容只给开发者查看，不会出现在留言板。",
+    "feedback.type": "类型",
+    "feedback.kindFeedback": "使用反馈",
+    "feedback.kindProblem": "遇到问题",
+    "feedback.kindIdea": "一点想法",
+    "feedback.kindOther": "其他",
+    "feedback.inputLabel": "内容",
+    "feedback.placeholder": "写下你遇到的问题，或对这个网站的想法。",
+    "feedback.note": "这不是公开评论区，也不是客服系统。请不要留下敏感个人信息。",
+    "guide.entry": "阅读使用指南",
+    "guide.eyebrow": "使用指南",
+    "guide.title": "轻轻使用就好",
+    "guide.step1Title": "留言",
+    "guide.step1Body": "写短消息，公开出现在留言板。可以只是一个近况、一个问题，或一句想被看见的话。",
+    "guide.step2Title": "漂流",
+    "guide.step2Body": "抽一个陌生问题，写一句匿名回答。答完可以继续换一个，不需要解释太多。",
+    "guide.step3Title": "我的",
+    "guide.step3Body": "这里可以查看当前设备里保存过的问题、回复和留言。没有账号，也不会同步到其他设备。",
+    "guide.step4Title": "翻译",
+    "guide.step4Body": "现在只是预留入口。不会调用翻译 API，也不会产生额外成本。",
+    "guide.step5Title": "主题",
+    "guide.step5Body": "左上角的调色板可以切换夜间、日间、青草、橘子、海洋和树木。选择会留在当前浏览器。",
+    "guide.step6Title": "语言",
+    "guide.step6Body": "地球按钮可以切换中文和 English。选择会保存在当前浏览器。",
+    "guide.step7Title": "收藏",
+    "guide.step7Body": "看到想稍后再读的内容，可以先收藏；也可以让它重新漂流。收藏只保存在这台设备里。",
+    "guide.step8Title": "意见箱",
+    "guide.step8Body": "遇到问题、想提建议，去底部 dock 或左侧菜单里的意见箱。内容只给开发者查看。",
+    "guide.step9Title": "安静模式",
+    "guide.step9Body": "安静模式会降低页面的提示感和信息密度，让浏览节奏慢一点。",
+    "guide.step10Title": "桌面端",
+    "guide.step10Body": "桌面端有较多柔和过渡。如果感觉交互反馈慢半拍，请稍等片刻，通常是内容和动效还在完成加载。",
+    "translation.eyebrow": "翻译",
+    "translation.title": "实时翻译（Beta）",
+    "translation.developing": "开发中",
+    "translation.wait": "敬请期待",
+    "empty.board": "还没有留言。你可以先发一条。",
+    "empty.filtered": "没有符合当前条件的留言。",
+    "empty.saved": "还没有本地收藏。",
+    "empty.savedLong": "还没有本地收藏。看到想稍后再读的内容，可以先收藏。",
+    "empty.loadingLocal": "正在读取这个浏览器里的内容。",
+    "empty.localMissingTitle": "当前打开的这个网址里没有读取到本地内容。",
+    "empty.localMissingBody": "本地记录只保存在当时使用的同一浏览器和同一个网站地址里。预览地址、localhost 和正式网站不会共享。只有曾经保存在这个浏览器里的内容或私人链接，才能在这里继续查看。",
+    "rhythm.late": "深夜很安静，页面会少一点催促。",
+    "rhythm.morning": "上午适合慢慢整理新内容。",
+    "rhythm.day": "白天内容密度稍高，适合浏览和回应。",
+    "rhythm.evening": "晚上适合让旧内容重新浮现。",
+    "status.quietOn": "已进入安静模式。",
+    "status.quietOff": "已恢复正常节奏。",
+    "status.noMessages": "当前没有可查看的留言。",
+    "status.resurfaced": "这条内容重新浮现了。",
+    "status.saved": "已保存到本地收藏。",
+    "status.unsaved": "已取消本地收藏。",
+    "summary.local": "{questions} 条本地问题 · {saved} 条收藏 · {hidden} 条已隐藏",
+    "saved.savedAt": "收藏于 {savedAt}",
+    "saved.originalAt": " · 原文 {createdAt}",
+    "mine.questions": "我的问题",
+    "mine.answers": "我的回答",
+    "mine.messages": "我的留言",
+    "mine.localLinks": "本地保存的私人链接",
+    "empty.none": "暂无内容。"
+  },
+  en: {
+    "app.title": "Anonymous Bottle",
+    "app.eyebrow": "Anonymous notes · question bottle",
+    "app.intro": "Leave a short anonymous note, or send a question for someone to answer. No account. No names.",
+    "app.privacy": "No account is used here. Other visitors will not see who wrote something. A local browser token helps keep your own content together. Please do not submit sensitive personal information; hosting and database services may still keep technical logs.",
+    "update.text": "Adds the bottom dock, local saves, resurfacing, and a quieter spatial rhythm.",
+    "theme.night": "Night",
+    "theme.day": "Day",
+    "theme.grass": "Grass",
+    "theme.orange": "Orange",
+    "theme.ocean": "Ocean",
+    "theme.tree": "Tree",
+    "nav.board": "Board",
+    "nav.ask": "Ask",
+    "nav.answer": "Drift",
+    "nav.check": "Replies",
+    "nav.mine": "My content",
+    "nav.saved": "Saved",
+    "nav.feedback": "Feedback",
+    "dock.board": "Notes",
+    "dock.answer": "Drift",
+    "dock.ask": "Ask",
+    "dock.mine": "Mine",
+    "dock.saved": "Saved",
+    "dock.feedback": "Feedback",
+    "stage.current": "Current space",
+    "actions.random": "Random",
+    "actions.resurface": "Resurface",
+    "actions.quiet": "Quiet",
+    "actions.restore": "Restore",
+    "actions.translate": "Translate",
+    "actions.publish": "Post",
+    "actions.randomOne": "Random note",
+    "actions.refresh": "Refresh",
+    "actions.createLink": "Create private link",
+    "actions.copy": "Copy",
+    "actions.drawQuestion": "Draw a question",
+    "actions.nextQuestion": "Another one",
+    "actions.sendAnswer": "Send answer",
+    "actions.viewReplies": "View replies",
+    "actions.submit": "Submit",
+    "actions.save": "Save",
+    "actions.saved": "Saved",
+    "actions.like": "Like",
+    "actions.liked": "Liked",
+    "actions.replyOpen": "Show replies",
+    "actions.replyClose": "Hide replies",
+    "actions.copyLink": "Copy link",
+    "actions.hide": "Hide",
+    "actions.edit": "Edit",
+    "actions.delete": "Delete",
+    "actions.expand": "Read more",
+    "actions.collapse": "Collapse",
+    "actions.openSaved": "Open again",
+    "actions.removeSaved": "Remove",
+    "kind.qa": "Public Q&A",
+    "kind.saved": "Saved",
+    "board.title": "Public Board",
+    "board.description": "Short anonymous notes shown publicly. Ask, greet, or leave a small moment.",
+    "board.inputLabel": "Public anonymous note",
+    "board.placeholder": "For example: Is anyone else waiting for a message?",
+    "board.messages": "Notes",
+    "controls.filter": "Filter",
+    "controls.sort": "Sort",
+    "filter.default": "All",
+    "filter.unanswered": "No replies",
+    "filter.related": "Related to me",
+    "filter.questions": "Public Q&A",
+    "filter.messages": "Notes only",
+    "sort.newest": "Newest",
+    "sort.replied": "Recently replied",
+    "sort.oldest": "Oldest",
+    "sort.liked": "Most liked",
+    "sort.recommended": "Balanced",
+    "ask.title": "Leave a question",
+    "ask.description": "Send a question to someone passing by. Save the link to check replies later.",
+    "ask.inputLabel": "Your question",
+    "ask.placeholder": "For example: How would you think about this?",
+    "ask.publicConsent": "If someone answers, and they also agree, this anonymous Q&A may appear publicly.",
+    "ask.saveLink": "Save this private link",
+    "ask.saveLinkHint": "Use this link or token later to read replies.",
+    "ask.noAccountHint": "There is no account system, so keep the link somewhere safe.",
+    "answer.title": "Answer a stranger",
+    "answer.description": "Draw a question someone left. A short answer is enough.",
+    "answer.empty": "Use the button below to draw a question.",
+    "answer.selfHint": "There is no account system, so you may draw your own anonymous question. Draw again if that happens.",
+    "answer.pool": "Question pool",
+    "answer.poolAll": "All questions",
+    "answer.poolSeed": "Seed only",
+    "answer.poolUser": "User questions",
+    "answer.seedNotice": "Seed questions may be added over time; answers appear publicly on the board.",
+    "answer.inputLabel": "Your anonymous answer",
+    "answer.placeholder": "Write your answer.",
+    "answer.publicConsent": "If the asker also agrees, this anonymous Q&A may appear publicly.",
+    "check.title": "Check my replies",
+    "check.description": "Paste your private link, or enter the token at the end of it.",
+    "check.inputLabel": "Private link or token",
+    "check.placeholder": "For example: https://.../?token=abc or abc",
+    "mine.title": "My content",
+    "mine.description": "If this browser has local records, you can see your questions, replies, and notes here.",
+    "saved.title": "Local saves",
+    "saved.description": "Saved only in this browser. Reopen or resurface later.",
+    "feedback.title": "Feedback",
+    "feedback.description": "Leave anonymous feedback, issues, or ideas. It is only for the developer and will not appear on the board.",
+    "feedback.type": "Type",
+    "feedback.kindFeedback": "Feedback",
+    "feedback.kindProblem": "Problem",
+    "feedback.kindIdea": "Idea",
+    "feedback.kindOther": "Other",
+    "feedback.inputLabel": "Content",
+    "feedback.placeholder": "Write what happened, or what you hope this site can become.",
+    "feedback.note": "This is not a public comment area or a support system. Please do not leave sensitive personal information.",
+    "guide.entry": "Read guide",
+    "guide.eyebrow": "Guide",
+    "guide.title": "Use it gently",
+    "guide.step1Title": "Notes",
+    "guide.step1Body": "Write a short note for the public board. It can be a small update, a question, or one sentence you want someone to see.",
+    "guide.step2Title": "Drift",
+    "guide.step2Body": "Draw a stranger's question and leave a short anonymous answer. You can move on whenever you want.",
+    "guide.step3Title": "Mine",
+    "guide.step3Body": "Use this area to see questions, replies, and notes saved on this device. There is no account and no sync across devices.",
+    "guide.step4Title": "Translate",
+    "guide.step4Body": "This is only a placeholder for now. No translation API is called, and no extra cost is created.",
+    "guide.step5Title": "Themes",
+    "guide.step5Body": "Use the palette button in the upper-left area to switch Night, Day, Grass, Orange, Ocean, and Tree. The choice stays in this browser.",
+    "guide.step6Title": "Language",
+    "guide.step6Body": "Use the globe button to switch Chinese and English. The choice is saved in this browser.",
+    "guide.step7Title": "Saved",
+    "guide.step7Body": "Save anything you may want to read later, or let it resurface. Saves stay only on this device.",
+    "guide.step8Title": "Feedback",
+    "guide.step8Body": "If something feels wrong or you have a suggestion, use Feedback in the dock or side menu. It is only shown to the developer.",
+    "guide.step9Title": "Quiet mode",
+    "guide.step9Body": "Quiet mode lowers prompts and visual density, so the page feels slower and calmer.",
+    "guide.step10Title": "Desktop",
+    "guide.step10Body": "Desktop uses several soft transitions. If feedback feels a little late, wait a moment; content and motion may still be settling.",
+    "translation.eyebrow": "Translate",
+    "translation.title": "Live Translation (Beta)",
+    "translation.developing": "In development",
+    "translation.wait": "Coming later",
+    "empty.board": "No notes yet. You can write the first one.",
+    "empty.filtered": "No notes match this view.",
+    "empty.saved": "No local saves yet.",
+    "empty.savedLong": "No local saves yet. Save something you may want to read again.",
+    "empty.loadingLocal": "Reading local records in this browser.",
+    "empty.localMissingTitle": "This address has not found any local content.",
+    "empty.localMissingBody": "Local records are saved only in the same browser and the same website address used at the time. Preview addresses, localhost, and the production site do not share them. Only content or private links previously saved in this browser can continue here.",
+    "rhythm.late": "Late night is quiet. The page will ask for less.",
+    "rhythm.morning": "Morning is good for gently sorting new things.",
+    "rhythm.day": "Daytime keeps a little more density for browsing and replying.",
+    "rhythm.evening": "Evening is good for bringing old notes back.",
+    "status.quietOn": "Quiet mode is on.",
+    "status.quietOff": "Normal rhythm is back.",
+    "status.noMessages": "There is nothing to view here yet.",
+    "status.resurfaced": "This note has resurfaced.",
+    "status.saved": "Saved locally.",
+    "status.unsaved": "Removed from local saves.",
+    "summary.local": "{questions} local questions · {saved} saved · {hidden} hidden",
+    "saved.savedAt": "Saved {savedAt}",
+    "saved.originalAt": " · original {createdAt}",
+    "mine.questions": "My questions",
+    "mine.answers": "My answers",
+    "mine.messages": "My notes",
+    "mine.localLinks": "Local private links",
+    "empty.none": "Nothing here yet."
+  }
 };
 
 const statusEl = document.querySelector("#status");
@@ -123,6 +462,25 @@ const siteNote = document.querySelector("#site-note");
 const views = [...document.querySelectorAll(".panel")];
 const viewButtons = [...document.querySelectorAll("[data-view]")];
 const themeButtons = [...document.querySelectorAll("[data-theme-choice]")];
+const themeMenu = document.querySelector(".theme-menu");
+const themeTrigger = document.querySelector("#theme-trigger");
+const themePopover = document.querySelector("#theme-popover");
+const currentThemeLabel = document.querySelector(".current-theme-label");
+const languageButtons = [...document.querySelectorAll("[data-language-choice]")];
+const languageMenu = document.querySelector(".language-menu");
+const languageTrigger = document.querySelector("#language-trigger");
+const languagePopover = document.querySelector("#language-popover");
+const currentLanguageLabel = document.querySelector(".current-language-label");
+const rhythmNote = document.querySelector("#rhythm-note");
+const localSummary = document.querySelector("#local-summary");
+const stageTitle = document.querySelector("#stage-title");
+const floatRandomMessageButton = document.querySelector("#float-random-message");
+const resurfaceContentButton = document.querySelector("#resurface-content");
+const quietToggle = document.querySelector("#quiet-toggle");
+const openGuideButton = document.querySelector("#open-guide");
+const openTranslationButton = document.querySelector("#open-translation");
+const guideSheet = document.querySelector("#guide-sheet");
+const translationSheet = document.querySelector("#translation-sheet");
 
 const publicMessageForm = document.querySelector("#public-message-form");
 const publicMessageText = document.querySelector("#public-message-text");
@@ -155,6 +513,7 @@ const checkForm = document.querySelector("#check-form");
 const claimToken = document.querySelector("#claim-token");
 const replyList = document.querySelector("#reply-list");
 const myContent = document.querySelector("#my-content");
+const savedContent = document.querySelector("#saved-content");
 
 const feedbackForm = document.querySelector("#feedback-form");
 const feedbackKind = document.querySelector("#feedback-kind");
@@ -163,7 +522,10 @@ const feedbackText = document.querySelector("#feedback-text");
 init();
 
 async function init() {
+  initLanguage();
   initTheme();
+  initQuietMode();
+  renderRhythmState();
   bindNavigation();
   bindCounters();
   bindForms();
@@ -187,11 +549,63 @@ async function init() {
   state.visitorToken = getVisitorToken();
   state.ownerTokenHash = await sha256(state.visitorToken);
   state.hiddenPublicMessageIds = getHiddenPublicMessageIds();
+  state.savedMessages = getSavedMessages();
   state.client = window.supabase.createClient(
     config.supabaseUrl,
     config.supabaseAnonKey
   );
   await loadPublicMessages();
+  updateLocalSummary();
+}
+
+function t(key) {
+  return I18N[state.language]?.[key] || I18N.zh[key] || key;
+}
+
+function formatText(key, values = {}) {
+  return t(key).replace(/\{(\w+)\}/g, (_, name) => values[name] ?? "");
+}
+
+function initLanguage() {
+  const savedLanguage = localStorage.getItem(LANGUAGE_KEY);
+  state.language = savedLanguage === "en" ? "en" : "zh";
+  applyTranslations();
+}
+
+function setLanguage(language) {
+  state.language = language === "en" ? "en" : "zh";
+  localStorage.setItem(LANGUAGE_KEY, state.language);
+  closeLanguageMenu();
+  applyTranslations();
+  renderSiteNote();
+  renderRhythmState();
+  updateLocalSummary();
+  updateThemeLabel(document.documentElement.dataset.theme || "night");
+  renderCurrentPublicMessages();
+  if (document.querySelector("#saved")?.classList.contains("is-active")) {
+    renderSavedContent();
+  }
+  if (document.querySelector("#mine")?.classList.contains("is-active") && state.client) {
+    loadMyContent();
+  }
+}
+
+function applyTranslations() {
+  document.documentElement.lang = state.language === "en" ? "en" : "zh-Hans";
+  document.title = t("app.title");
+  document.querySelectorAll("[data-i18n]").forEach((element) => {
+    element.textContent = t(element.dataset.i18n);
+  });
+  document.querySelectorAll("[data-i18n-placeholder]").forEach((element) => {
+    element.placeholder = t(element.dataset.i18nPlaceholder);
+  });
+  languageButtons.forEach((button) => {
+    button.classList.toggle("is-active", button.dataset.languageChoice === state.language);
+  });
+  if (currentLanguageLabel) currentLanguageLabel.textContent = state.language === "en" ? "EN" : "中";
+  if (languageTrigger) languageTrigger.setAttribute("aria-label", state.language === "en" ? "Language" : "语言");
+  updateThemeLabel(document.documentElement.dataset.theme || "night");
+  if (quietToggle) quietToggle.textContent = state.quietMode ? t("actions.restore") : t("actions.quiet");
 }
 
 async function loadConfig() {
@@ -249,8 +663,13 @@ function showView(id) {
   viewButtons.forEach((button) => {
     button.classList.toggle("is-active", button.dataset.view === id);
   });
+  if (stageTitle) {
+    const activeButton = viewButtons.find((button) => button.dataset.view === id);
+    stageTitle.textContent = activeButton?.textContent?.trim() || t("nav.board");
+  }
   setStatus("");
   if (id === "mine" && state.client) loadMyContent();
+  if (id === "saved") renderSavedContent();
 }
 
 function bindCounters() {
@@ -270,6 +689,36 @@ function bindForms() {
   publicMessageFilter?.addEventListener("change", handlePublicFilterChange);
   publicMessageSort?.addEventListener("change", handlePublicSortChange);
   randomPublicMessageButton?.addEventListener("click", showRandomPublicMessage);
+  floatRandomMessageButton?.addEventListener("click", showRandomPublicMessage);
+  resurfaceContentButton?.addEventListener("click", resurfaceLocalContent);
+  quietToggle?.addEventListener("click", toggleQuietMode);
+  openGuideButton?.addEventListener("click", () => openSheet(guideSheet));
+  openTranslationButton?.addEventListener("click", () => openSheet(translationSheet));
+  themeTrigger?.addEventListener("click", (event) => {
+    event.stopPropagation();
+    closeLanguageMenu();
+    toggleThemeMenu();
+  });
+  languageTrigger?.addEventListener("click", (event) => {
+    event.stopPropagation();
+    closeThemeMenu();
+    toggleLanguageMenu();
+  });
+  document.addEventListener("click", (event) => {
+    if (!languageMenu?.contains(event.target)) closeLanguageMenu();
+    if (!themeMenu?.contains(event.target)) closeThemeMenu();
+  });
+  document.querySelectorAll("[data-close-sheet]").forEach((button) => {
+    button.addEventListener("click", () => closeSheets());
+  });
+  document.querySelectorAll(".sheet-backdrop").forEach((sheet) => {
+    sheet.addEventListener("click", (event) => {
+      if (event.target === sheet) closeSheets();
+    });
+  });
+  languageButtons.forEach((button) => {
+    button.addEventListener("click", () => setLanguage(button.dataset.languageChoice));
+  });
   restoreHiddenMessagesButton?.addEventListener("click", restoreHiddenPublicMessages);
   refreshMessagesButton.addEventListener("click", loadPublicMessages);
   publicMessageList.addEventListener("click", handlePublicMessageClick);
@@ -277,6 +726,7 @@ function bindForms() {
   replyList.addEventListener("click", handleReplyListClick);
   replyList.addEventListener("submit", submitAskerReply);
   myContent.addEventListener("click", handleMyContentClick);
+  savedContent?.addEventListener("click", handleSavedContentClick);
   questionForm.addEventListener("submit", submitQuestion);
   questionPoolFilter?.addEventListener("change", handleQuestionPoolFilterChange);
   loadQuestionButton.addEventListener("click", loadRandomQuestion);
@@ -290,6 +740,82 @@ function bindForms() {
   });
 }
 
+function initQuietMode() {
+  state.quietMode = localStorage.getItem(QUIET_MODE_KEY) === "true";
+  document.documentElement.classList.toggle("quiet-mode", state.quietMode);
+  if (quietToggle) quietToggle.textContent = state.quietMode ? t("actions.restore") : t("actions.quiet");
+}
+
+function toggleQuietMode() {
+  state.quietMode = !state.quietMode;
+  localStorage.setItem(QUIET_MODE_KEY, String(state.quietMode));
+  document.documentElement.classList.toggle("quiet-mode", state.quietMode);
+  if (quietToggle) quietToggle.textContent = state.quietMode ? t("actions.restore") : t("actions.quiet");
+  setStatus(state.quietMode ? t("status.quietOn") : t("status.quietOff"));
+}
+
+function openSheet(sheet) {
+  if (!sheet) return;
+  sheet.hidden = false;
+  requestAnimationFrame(() => sheet.classList.add("is-open"));
+}
+
+function toggleThemeMenu() {
+  if (!themePopover || !themeTrigger) return;
+  const shouldOpen = themePopover.hidden;
+  themePopover.hidden = !shouldOpen;
+  themeTrigger.setAttribute("aria-expanded", String(shouldOpen));
+  themeMenu?.classList.toggle("is-open", shouldOpen);
+}
+
+function closeThemeMenu() {
+  if (!themePopover || !themeTrigger) return;
+  themePopover.hidden = true;
+  themeTrigger.setAttribute("aria-expanded", "false");
+  themeMenu?.classList.remove("is-open");
+}
+
+function toggleLanguageMenu() {
+  if (!languagePopover || !languageTrigger) return;
+  const shouldOpen = languagePopover.hidden;
+  languagePopover.hidden = !shouldOpen;
+  languageTrigger.setAttribute("aria-expanded", String(shouldOpen));
+  languageMenu?.classList.toggle("is-open", shouldOpen);
+}
+
+function closeLanguageMenu() {
+  if (!languagePopover || !languageTrigger) return;
+  languagePopover.hidden = true;
+  languageTrigger.setAttribute("aria-expanded", "false");
+  languageMenu?.classList.remove("is-open");
+}
+
+function closeSheets() {
+  document.querySelectorAll(".sheet-backdrop.is-open").forEach((sheet) => {
+    sheet.classList.remove("is-open");
+    window.setTimeout(() => {
+      sheet.hidden = true;
+    }, 180);
+  });
+}
+
+function renderRhythmState() {
+  if (!rhythmNote) return;
+
+  const hour = new Date().getHours();
+  const rhythm =
+    hour < 6
+      ? t("rhythm.late")
+      : hour < 11
+        ? t("rhythm.morning")
+        : hour < 18
+          ? t("rhythm.day")
+          : t("rhythm.evening");
+  document.documentElement.dataset.rhythm =
+    hour < 6 ? "late" : hour < 11 ? "morning" : hour < 18 ? "day" : "evening";
+  rhythmNote.textContent = rhythm;
+}
+
 function initTheme() {
   setTheme(localStorage.getItem(THEME_KEY) || "night", false);
 }
@@ -300,11 +826,31 @@ function setTheme(theme, shouldPersist = true) {
   )
     ? theme
     : "night";
+  const isChanging = document.documentElement.dataset.theme && document.documentElement.dataset.theme !== safeTheme;
+  if (isChanging) {
+    document.documentElement.classList.remove("theme-transitioning");
+    window.requestAnimationFrame(() => {
+      document.documentElement.classList.add("theme-transitioning");
+      window.setTimeout(() => {
+        document.documentElement.classList.remove("theme-transitioning");
+      }, 620);
+    });
+  }
   document.documentElement.dataset.theme = safeTheme;
   themeButtons.forEach((button) => {
     button.classList.toggle("is-active", button.dataset.themeChoice === safeTheme);
   });
+  updateThemeLabel(safeTheme);
+  closeThemeMenu();
   if (shouldPersist) localStorage.setItem(THEME_KEY, safeTheme);
+}
+
+function updateThemeLabel(theme) {
+  const safeTheme = ["night", "day", "grass", "orange", "ocean", "tree"].includes(theme)
+    ? theme
+    : "night";
+  if (currentThemeLabel) currentThemeLabel.textContent = t(`theme.${safeTheme}`);
+  if (themeTrigger) themeTrigger.setAttribute("aria-label", t(`theme.${safeTheme}`));
 }
 
 function openTokenFromUrl() {
@@ -401,9 +947,13 @@ function renderCurrentPublicMessages() {
   );
   state.visiblePublicMessages = visibleMessages;
   updateHiddenMessagesControl();
+  updateLocalSummary();
   renderPublicMessages(
     visibleMessages
   );
+  if (document.querySelector("#saved")?.classList.contains("is-active")) {
+    renderSavedContent();
+  }
 }
 
 function filterPublicMessages(messages, filterMode) {
@@ -477,7 +1027,7 @@ function sortPublicMessages(messages, sortMode) {
 function renderPublicMessages(messages) {
   if (!messages.length) {
     publicMessageList.innerHTML =
-      '<article class="empty-state">没有符合当前条件的留言。</article>';
+      `<article class="empty-state">${t("empty.filtered")}</article>`;
     return;
   }
 
@@ -490,25 +1040,32 @@ function renderPublicMessageCard(message) {
   const replyCount = Number(message.reply_count || 0);
   const likeCount = Number(message.like_count || 0);
   const messageId = escapeHtml(message.public_id);
+  const isSaved = isMessageSaved(message.public_id);
 
   return `
-    <article class="message-card" id="post-${messageId}" data-message-id="${messageId}">
+    <article class="message-card${isSaved ? " is-saved" : ""}" id="post-${messageId}" data-message-id="${messageId}">
       <div class="message-topline">
         <p class="message-meta">${formatDate(message.created_at)}${message.edited_at ? ` · 已编辑` : ""}</p>
-        ${message.message_kind === "bottle_qa" ? '<span class="message-kind">公开问答</span>' : ""}
+        <span class="message-tags">
+          ${message.message_kind === "bottle_qa" ? `<span class="message-kind">${t("kind.qa")}</span>` : ""}
+          ${isSaved ? `<span class="message-kind">${t("kind.saved")}</span>` : ""}
+        </span>
       </div>
       <p class="message-stats">
         <span class="reply-stat">${replyCount} 条回复</span>
         <span>${likeCount} 个喜欢</span>
       </p>
       <p class="message-body${isLongBody ? " is-collapsed" : ""}">${escapeHtml(body)}</p>
-      ${isLongBody ? '<button class="text-button" data-action="toggle-message-body" type="button">展开全文</button>' : ""}
+      ${isLongBody ? `<button class="text-button" data-action="toggle-message-body" type="button">${t("actions.expand")}</button>` : ""}
       <div class="message-actions">
-        <button class="secondary mini-button" data-action="toggle-replies" type="button">展开回复</button>
-        <button class="secondary mini-button" data-action="like-message" type="button">${message.liked_by_me ? "已喜欢" : "喜欢"}</button>
-        <button class="secondary mini-button" data-action="copy-message-link" type="button">复制链接</button>
-        <button class="secondary mini-button" data-action="hide-message" type="button">隐藏此条</button>
-        ${message.owned_by_me ? '<button class="secondary mini-button" data-action="edit-message" type="button">编辑</button><button class="secondary mini-button danger-button" data-action="delete-message" type="button">删除</button>' : ""}
+        <button class="secondary mini-button" data-action="toggle-replies" type="button">${t("actions.replyOpen")}</button>
+        <button class="secondary mini-button" data-action="like-message" type="button">${message.liked_by_me ? t("actions.liked") : t("actions.like")}</button>
+        <button class="secondary mini-button" data-action="save-message" type="button">${isSaved ? t("actions.saved") : t("actions.save")}</button>
+        <button class="secondary mini-button" data-action="redrift-message" type="button">${t("actions.resurface")}</button>
+        <button class="secondary mini-button" data-action="translate-message" type="button">${t("actions.translate")}</button>
+        <button class="secondary mini-button" data-action="copy-message-link" type="button">${t("actions.copyLink")}</button>
+        <button class="secondary mini-button" data-action="hide-message" type="button">${t("actions.hide")}</button>
+        ${message.owned_by_me ? `<button class="secondary mini-button" data-action="edit-message" type="button">${t("actions.edit")}</button><button class="secondary mini-button danger-button" data-action="delete-message" type="button">${t("actions.delete")}</button>` : ""}
       </div>
       <div class="inline-replies" hidden></div>
       <form class="reply-form" hidden>
@@ -541,13 +1098,25 @@ async function handlePublicMessageClick(event) {
 
     replies.hidden = !shouldOpen;
     form.hidden = !shouldOpen;
-    button.textContent = shouldOpen ? "收起回复" : "展开回复";
+    button.textContent = shouldOpen ? t("actions.replyClose") : t("actions.replyOpen");
 
     if (shouldOpen) await loadPublicReplies(messageId, replies);
   }
 
   if (button.dataset.action === "like-message") {
     await likePublicMessage(messageId);
+  }
+
+  if (button.dataset.action === "save-message") {
+    toggleSavedMessage(messageId);
+  }
+
+  if (button.dataset.action === "redrift-message") {
+    redriftMessage(messageId);
+  }
+
+  if (button.dataset.action === "translate-message") {
+    openSheet(translationSheet);
   }
 
   if (button.dataset.action === "copy-message-link") {
@@ -570,7 +1139,7 @@ async function handlePublicMessageClick(event) {
 function togglePublicMessageBody(card, button) {
   const body = card.querySelector(".message-body");
   const isCollapsed = body.classList.toggle("is-collapsed");
-  button.textContent = isCollapsed ? "展开全文" : "收起";
+  button.textContent = isCollapsed ? t("actions.expand") : t("actions.collapse");
 }
 
 async function copyPublicMessageLink(messageId) {
@@ -589,12 +1158,124 @@ async function copyPublicMessageLink(messageId) {
   }
 }
 
+function getSavedMessages() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(SAVED_MESSAGES_KEY) || "{}");
+    return saved && typeof saved === "object" && !Array.isArray(saved) ? saved : {};
+  } catch {
+    return {};
+  }
+}
+
+function saveSavedMessages() {
+  localStorage.setItem(SAVED_MESSAGES_KEY, JSON.stringify(state.savedMessages));
+  updateLocalSummary();
+}
+
+function isMessageSaved(messageId) {
+  return Boolean(state.savedMessages?.[messageId]);
+}
+
+function toggleSavedMessage(messageId) {
+  const message = state.publicMessages.find((item) => item.public_id === messageId);
+  if (!message) return setStatus("这条内容当前不可收藏。", true);
+
+  if (isMessageSaved(messageId)) {
+    delete state.savedMessages[messageId];
+    setStatus(t("status.unsaved"));
+  } else {
+    state.savedMessages[messageId] = {
+      public_id: message.public_id,
+      message_text: message.message_text,
+      message_kind: message.message_kind,
+      created_at: message.created_at,
+      saved_at: new Date().toISOString()
+    };
+    setStatus(t("status.saved"));
+  }
+
+  saveSavedMessages();
+  renderCurrentPublicMessages();
+}
+
+function redriftMessage(messageId) {
+  if (!focusPublicMessage(messageId)) return;
+  const card = document.querySelector(`[data-message-id="${CSS.escape(messageId)}"]`);
+  card?.classList.add("is-resurfaced");
+  window.setTimeout(() => card?.classList.remove("is-resurfaced"), 2200);
+  setStatus(t("status.resurfaced"));
+}
+
+function resurfaceLocalContent() {
+  const savedItems = Object.values(state.savedMessages || {});
+  const pool = savedItems.length ? savedItems : state.visiblePublicMessages;
+  if (!pool.length) return setStatus("暂时没有可重新漂流的内容。", true);
+
+  const oldest = [...pool].sort(
+    (a, b) => new Date(a.saved_at || a.created_at || 0) - new Date(b.saved_at || b.created_at || 0)
+  )[0];
+  if (oldest?.public_id) {
+    showView("board");
+    window.setTimeout(() => redriftMessage(oldest.public_id), 0);
+  }
+}
+
+function renderSavedContent() {
+  if (!savedContent) return;
+
+  const savedItems = Object.values(state.savedMessages || {}).sort(
+    (a, b) => new Date(b.saved_at || 0) - new Date(a.saved_at || 0)
+  );
+
+  if (!savedItems.length) {
+    savedContent.innerHTML =
+      `<article class="empty-state">${t("empty.savedLong")}</article>`;
+    return;
+  }
+
+  savedContent.innerHTML = savedItems
+    .map((item) => `
+      <article class="content-card saved-card" data-saved-message-id="${escapeHtml(item.public_id)}">
+        <p class="message-meta">${formatText("saved.savedAt", { savedAt: formatDate(item.saved_at) })}${item.created_at ? formatText("saved.originalAt", { createdAt: formatDate(item.created_at) }) : ""}</p>
+        <p class="message-body">${escapeHtml(item.message_text || "本地收藏内容")}</p>
+        <div class="content-actions">
+          <button class="secondary mini-button" data-action="open-saved-message" type="button">${t("actions.openSaved")}</button>
+          <button class="secondary mini-button" data-action="remove-saved-message" type="button">${t("actions.removeSaved")}</button>
+        </div>
+      </article>
+    `)
+    .join("");
+}
+
+function handleSavedContentClick(event) {
+  const button = event.target.closest("button[data-action]");
+  if (!button) return;
+
+  const card = button.closest("[data-saved-message-id]");
+  const messageId = card?.dataset.savedMessageId;
+  if (!messageId) return;
+
+  if (button.dataset.action === "open-saved-message") {
+    showView("board");
+    window.setTimeout(() => redriftMessage(messageId), 0);
+  }
+
+  if (button.dataset.action === "remove-saved-message") {
+    delete state.savedMessages[messageId];
+    saveSavedMessages();
+    renderSavedContent();
+    renderCurrentPublicMessages();
+    setStatus(t("status.unsaved"));
+  }
+}
+
 function hidePublicMessage(messageId) {
   if (!state.hiddenPublicMessageIds.includes(messageId)) {
     state.hiddenPublicMessageIds = [...state.hiddenPublicMessageIds, messageId];
     saveHiddenPublicMessageIds();
   }
   renderCurrentPublicMessages();
+  updateLocalSummary();
   setStatus("已在当前浏览器隐藏这条留言。");
 }
 
@@ -602,12 +1283,13 @@ function restoreHiddenPublicMessages() {
   state.hiddenPublicMessageIds = [];
   saveHiddenPublicMessageIds();
   renderCurrentPublicMessages();
+  updateLocalSummary();
   setStatus("已恢复隐藏的留言。");
 }
 
 function showRandomPublicMessage() {
   if (!state.visiblePublicMessages.length) {
-    return setStatus("当前没有可查看的留言。", true);
+    return setStatus(t("status.noMessages"), true);
   }
 
   const message =
@@ -1312,6 +1994,7 @@ function rememberLocalQuestion({ publicId = "", questionText = "", token, create
 
   localStorage.setItem(LOCAL_QUESTIONS_KEY, JSON.stringify(nextQuestions));
   if (publicId) rememberLocalQuestionToken(publicId, token);
+  updateLocalSummary();
 }
 
 function rememberLocalQuestionToken(publicId, token) {
@@ -1375,8 +2058,21 @@ function updateHiddenMessagesControl() {
 function renderSiteNote() {
   if (!siteNote) return;
 
-  siteNote.textContent = `v${SITE_NOTE.version} · ${SITE_NOTE.text}`;
+  siteNote.textContent = `v${SITE_NOTE.version} · ${t(SITE_NOTE.textKey)}`;
   siteNote.hidden = false;
+}
+
+function updateLocalSummary() {
+  if (!localSummary) return;
+
+  const localQuestionCount = getLocalQuestions().length;
+  const savedCount = Object.keys(state.savedMessages || {}).length;
+  const hiddenCount = state.hiddenPublicMessageIds.length;
+  localSummary.textContent = formatText("summary.local", {
+    questions: localQuestionCount,
+    saved: savedCount,
+    hidden: hiddenCount
+  });
 }
 
 function renderSeedQuestionNotice() {
@@ -1414,8 +2110,8 @@ function renderMyContent(items) {
   if (!items.length && !localQuestions.length) {
     myContent.innerHTML = `
       <article class="empty-state">
-        <p>当前打开的这个网址里没有读取到本地内容。</p>
-        <p class="small">本地记录只保存在当时使用的同一浏览器和同一个网站地址里。预览地址、localhost 和正式网站不会共享。只有曾经保存在这个浏览器里的内容或私人链接，才能在这里继续查看。</p>
+        <p>${escapeHtml(t("empty.localMissingTitle"))}</p>
+        <p class="small">${escapeHtml(t("empty.localMissingBody"))}</p>
       </article>
     `;
     return;
@@ -1432,10 +2128,10 @@ function renderMyContent(items) {
   );
 
   myContent.innerHTML = `
-    ${renderMySection("我的问题", groups.question, "question")}
+    ${renderMySection(t("mine.questions"), groups.question, "question")}
     ${renderLocalQuestionSection(localOnlyQuestions)}
-    ${renderMySection("我的回答", groups.answer, "answer")}
-    ${renderMySection("我的留言", groups.public_message, "public_message")}
+    ${renderMySection(t("mine.answers"), groups.answer, "answer")}
+    ${renderMySection(t("mine.messages"), groups.public_message, "public_message")}
   `;
 }
 
@@ -1444,7 +2140,7 @@ function renderLocalQuestionSection(items) {
 
   return `
     <section class="mine-section">
-      <h3>本地保存的私人链接</h3>
+      <h3>${t("mine.localLinks")}</h3>
       ${items
         .map((item) => `
           <article class="content-card">
@@ -1466,7 +2162,7 @@ function renderMySection(title, items, type) {
     return `
       <section class="mine-section">
         <h3>${title}</h3>
-        <article class="empty-state">暂无内容。</article>
+        <article class="empty-state">${t("empty.none")}</article>
       </section>
     `;
   }
