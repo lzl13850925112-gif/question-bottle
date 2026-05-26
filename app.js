@@ -20,6 +20,8 @@ const RECENT_QUESTIONS_KEY = "questionBottle.recentQuestionIds";
 const VISITOR_TOKEN_KEY = "questionBottle.visitorToken";
 const HIDDEN_PUBLIC_MESSAGES_KEY = "questionBottle.hiddenPublicMessageIds";
 const LOCAL_QUESTION_TOKENS_KEY = "questionBottle.localQuestionTokens";
+const LOCAL_QUESTIONS_KEY = "questionBottle.localQuestions";
+const SEEN_QUESTIONS_META_KEY = "questionBottle.seenQuestionMeta";
 const THEME_KEY = "questionBottle.theme";
 const MAX_RECENT_QUESTIONS = 12;
 const PUBLIC_MESSAGE_COLLAPSE_LENGTH = 140;
@@ -112,8 +114,8 @@ const SEED_QUESTIONS = [...new Set(SEED_QUESTION_TEXTS)].map((text, index) => ({
 }));
 
 const SITE_NOTE = {
-  version: "3.0",
-  text: "重做了界面层级、主题切换和阅读体验，使用方式保持不变。"
+  version: "4.0",
+  text: "加入意见箱和更连续的本地使用体验。"
 };
 
 const statusEl = document.querySelector("#status");
@@ -153,6 +155,10 @@ const checkForm = document.querySelector("#check-form");
 const claimToken = document.querySelector("#claim-token");
 const replyList = document.querySelector("#reply-list");
 const myContent = document.querySelector("#my-content");
+
+const feedbackForm = document.querySelector("#feedback-form");
+const feedbackKind = document.querySelector("#feedback-kind");
+const feedbackText = document.querySelector("#feedback-text");
 
 init();
 
@@ -250,6 +256,7 @@ function showView(id) {
 function bindCounters() {
   document.querySelectorAll("[data-counter-for]").forEach((counter) => {
     const input = document.querySelector(`#${counter.dataset.counterFor}`);
+    if (!input) return;
     const render = () => {
       counter.textContent = `${input.value.length} / ${input.maxLength}`;
     };
@@ -277,6 +284,7 @@ function bindForms() {
   answerForm.addEventListener("submit", submitAnswer);
   checkForm.addEventListener("submit", checkReplies);
   copyClaimLink.addEventListener("click", copyClaim);
+  feedbackForm?.addEventListener("submit", submitSiteFeedback);
   themeButtons.forEach((button) => {
     button.addEventListener("click", () => setTheme(button.dataset.themeChoice));
   });
@@ -327,6 +335,32 @@ async function submitPublicMessage(event) {
     state.hadStoredVisitorToken = true;
     setStatus("留言已发布。");
     await loadPublicMessages();
+  });
+}
+
+async function submitSiteFeedback(event) {
+  event.preventDefault();
+  if (!state.client) return setStatus("服务暂时不可用，请稍后再试。", true);
+
+  const text = normalizeText(feedbackText.value);
+  const validation = validateText(text, 2, 1000);
+  if (!validation.ok) return setStatus(validation.message, true);
+
+  await withBusy(feedbackForm, async () => {
+    const { error } = await state.client.rpc("submit_site_feedback", {
+      feedback_kind_value: feedbackKind.value,
+      feedback_body: text,
+      owner_token_hash_value: state.ownerTokenHash
+    });
+
+    if (isMissingRpc(error)) {
+      throw new Error("意见箱需要先更新数据库函数。");
+    }
+
+    if (error) throw error;
+    feedbackForm.reset();
+    updateAllCounters();
+    setStatus("已收到。谢谢你留下这条反馈。");
   });
 }
 
@@ -732,7 +766,7 @@ async function submitQuestion(event) {
   const tokenHash = await sha256(token);
 
   await withBusy(questionForm, async () => {
-    let { error } = await state.client.rpc("submit_question", {
+    let { data, error } = await state.client.rpc("submit_question", {
       question_body: text,
       claim_token_hash_value: tokenHash,
       allow_public_value: questionPublicConsent.checked,
@@ -744,6 +778,7 @@ async function submitQuestion(event) {
         question_body: text,
         claim_token_hash_value: tokenHash
       });
+      data = fallback.data;
       error = fallback.error;
     }
 
@@ -755,7 +790,15 @@ async function submitQuestion(event) {
     url.searchParams.set("token", token);
     claimLink.value = url.toString();
     claimResult.hidden = false;
-    await rememberSubmittedQuestionToken(text, token);
+    const savedQuestion = Array.isArray(data) ? data[0] : null;
+    let publicId = savedQuestion?.public_id || "";
+    if (!publicId) publicId = await rememberSubmittedQuestionToken(text, token);
+    rememberLocalQuestion({
+      publicId,
+      questionText: text,
+      token,
+      createdAt: savedQuestion?.created_at || new Date().toISOString()
+    });
     state.hadStoredVisitorToken = true;
     questionForm.reset();
     updateAllCounters();
@@ -772,6 +815,7 @@ async function loadRandomQuestion() {
   }
 
   await withBusy(loadQuestionButton, async () => {
+    randomQuestionCard.innerHTML = '<p class="muted">内容漂流中...</p>';
     const recentIds = getRecentQuestionIds();
     let { data, error } = await state.client.rpc("get_random_question", {
       answer_limit: Number(config.maxAnswersPerQuestion || 5),
@@ -802,9 +846,11 @@ async function loadRandomQuestion() {
       return;
     }
 
+    const seenMeta = getSeenQuestionMeta(state.currentQuestion.public_id);
     rememberQuestionId(state.currentQuestion.public_id);
+    rememberSeenQuestion(state.currentQuestion.public_id);
     randomQuestionCard.innerHTML = `
-      <p class="reply-meta">一个匿名问题 · ${Number(state.currentQuestion.answer_count || 0)} 条回复</p>
+      <p class="reply-meta">一个匿名问题 · ${Number(state.currentQuestion.answer_count || 0)} 条回复${formatSeenQuestionHint(seenMeta)}</p>
       <p>${escapeHtml(state.currentQuestion.question_text)}</p>
     `;
     answerForm.hidden = false;
@@ -832,6 +878,7 @@ function handleQuestionPoolFilterChange(event) {
 function loadSeedQuestion() {
   const seedQuestion =
     SEED_QUESTIONS[Math.floor(Math.random() * SEED_QUESTIONS.length)];
+  const seenMeta = getSeenQuestionMeta(seedQuestion.id);
 
   state.currentQuestion = {
     ...seedQuestion,
@@ -839,8 +886,9 @@ function loadSeedQuestion() {
     question_text: seedQuestion.text,
     answer_count: 0
   };
+  rememberSeenQuestion(seedQuestion.id);
   randomQuestionCard.innerHTML = `
-    <p class="reply-meta">种子问题</p>
+    <p class="reply-meta">种子问题${formatSeenQuestionHint(seenMeta)}</p>
     <p>${escapeHtml(seedQuestion.text)}</p>
   `;
   answerForm.hidden = false;
@@ -1175,6 +1223,38 @@ function clearRecentQuestionIds() {
   localStorage.removeItem(RECENT_QUESTIONS_KEY);
 }
 
+function getSeenQuestionMap() {
+  try {
+    const map = JSON.parse(localStorage.getItem(SEEN_QUESTIONS_META_KEY) || "{}");
+    return map && typeof map === "object" && !Array.isArray(map) ? map : {};
+  } catch {
+    return {};
+  }
+}
+
+function getSeenQuestionMeta(publicId) {
+  if (!publicId) return null;
+  return getSeenQuestionMap()[publicId] || null;
+}
+
+function rememberSeenQuestion(publicId) {
+  if (!publicId) return;
+
+  const map = getSeenQuestionMap();
+  const previous = map[publicId] || {};
+  map[publicId] = {
+    first_seen_at: previous.first_seen_at || new Date().toISOString(),
+    last_seen_at: new Date().toISOString(),
+    seen_count: Number(previous.seen_count || 0) + 1
+  };
+  localStorage.setItem(SEEN_QUESTIONS_META_KEY, JSON.stringify(map));
+}
+
+function formatSeenQuestionHint(meta) {
+  if (!meta) return " · 新的漂流";
+  return ` · 重新看到 · 上次 ${formatDate(meta.last_seen_at)}`;
+}
+
 function getLocalQuestionTokens() {
   try {
     const tokens = JSON.parse(localStorage.getItem(LOCAL_QUESTION_TOKENS_KEY) || "{}");
@@ -1182,6 +1262,56 @@ function getLocalQuestionTokens() {
   } catch {
     return {};
   }
+}
+
+function getLocalQuestions() {
+  let savedQuestions = [];
+  try {
+    const parsed = JSON.parse(localStorage.getItem(LOCAL_QUESTIONS_KEY) || "[]");
+    savedQuestions = Array.isArray(parsed) ? parsed : [];
+  } catch {
+    savedQuestions = [];
+  }
+
+  const tokenMapQuestions = Object.entries(getLocalQuestionTokens()).map(
+    ([publicId, token]) => ({
+      publicId,
+      token,
+      questionText: "本地保存的问题",
+      createdAt: ""
+    })
+  );
+  const merged = [...savedQuestions, ...tokenMapQuestions].filter(
+    (item) => item?.token
+  );
+  const seen = new Set();
+
+  return merged.filter((item) => {
+    const key = item.publicId || item.token;
+    if (!key || seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
+function rememberLocalQuestion({ publicId = "", questionText = "", token, createdAt }) {
+  if (!token) return;
+
+  const nextQuestions = [
+    {
+      publicId,
+      questionText,
+      token,
+      createdAt: createdAt || new Date().toISOString()
+    },
+    ...getLocalQuestions().filter((item) => {
+      if (publicId && item.publicId === publicId) return false;
+      return item.token !== token;
+    })
+  ].slice(0, 30);
+
+  localStorage.setItem(LOCAL_QUESTIONS_KEY, JSON.stringify(nextQuestions));
+  if (publicId) rememberLocalQuestionToken(publicId, token);
 }
 
 function rememberLocalQuestionToken(publicId, token) {
@@ -1197,18 +1327,19 @@ function getLocalQuestionToken(publicId) {
 }
 
 async function rememberSubmittedQuestionToken(questionBody, token) {
-  if (!state.client || !state.ownerTokenHash) return;
+  if (!state.client || !state.ownerTokenHash) return "";
 
   const { data, error } = await state.client.rpc("get_my_content", {
     owner_token_hash_value: state.ownerTokenHash
   });
-  if (error) return;
+  if (error) return "";
 
   const question = (data || [])
     .filter((item) => item.item_type === "question" && item.body === questionBody)
     .sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0))[0];
 
   if (question?.public_id) rememberLocalQuestionToken(question.public_id, token);
+  return question?.public_id || "";
 }
 
 function getHiddenPublicMessageIds() {
@@ -1258,16 +1389,16 @@ function renderSeedQuestionNotice() {
 async function loadMyContent() {
   if (!state.client || !state.ownerTokenHash) return;
 
-  if (!state.hadStoredVisitorToken) {
-    myContent.innerHTML =
-      '<article class="empty-state">这台设备里没有找到本地记录。可能是更换设备、清理浏览器数据或使用无痕模式导致。</article>';
-    return;
-  }
-
   myContent.innerHTML = '<article class="empty-state">正在读取这个浏览器里的内容。</article>';
   const { data, error } = await state.client.rpc("get_my_content", {
     owner_token_hash_value: state.ownerTokenHash
   });
+
+  if (isMissingRpc(error)) {
+    myContent.innerHTML =
+      '<article class="empty-state">这个入口需要先更新数据库函数后才能使用。</article>';
+    return;
+  }
 
   if (error) {
     myContent.innerHTML = `<article class="empty-state">${escapeHtml(error.message)}</article>`;
@@ -1278,16 +1409,55 @@ async function loadMyContent() {
 }
 
 function renderMyContent(items) {
+  const localQuestions = getLocalQuestions();
+
+  if (!items.length && !localQuestions.length) {
+    myContent.innerHTML = `
+      <article class="empty-state">
+        <p>当前打开的这个网址里没有读取到本地内容。</p>
+        <p class="small">本地记录只保存在当时使用的同一浏览器和同一个网站地址里。预览地址、localhost 和正式网站不会共享。只有曾经保存在这个浏览器里的内容或私人链接，才能在这里继续查看。</p>
+      </article>
+    `;
+    return;
+  }
+
   const groups = {
     question: items.filter((item) => item.item_type === "question"),
     answer: items.filter((item) => item.item_type === "answer"),
     public_message: items.filter((item) => item.item_type === "public_message")
   };
+  const remoteQuestionIds = new Set(groups.question.map((item) => item.public_id));
+  const localOnlyQuestions = localQuestions.filter(
+    (item) => !item.publicId || !remoteQuestionIds.has(item.publicId)
+  );
 
   myContent.innerHTML = `
     ${renderMySection("我的问题", groups.question, "question")}
+    ${renderLocalQuestionSection(localOnlyQuestions)}
     ${renderMySection("我的回答", groups.answer, "answer")}
     ${renderMySection("我的留言", groups.public_message, "public_message")}
+  `;
+}
+
+function renderLocalQuestionSection(items) {
+  if (!items.length) return "";
+
+  return `
+    <section class="mine-section">
+      <h3>本地保存的私人链接</h3>
+      ${items
+        .map((item) => `
+          <article class="content-card">
+            <p class="message-meta">${item.createdAt ? formatDate(item.createdAt) : "本地记录"}</p>
+            <p class="message-body">${escapeHtml(item.questionText || "本地保存的问题")}</p>
+            <div class="content-actions">
+              <button class="secondary mini-button" data-action="view-local-question-replies" data-token="${escapeHtml(item.token)}" type="button">查看回复</button>
+            </div>
+            <p class="message-meta">这条记录保存在当前浏览器里，可用来找回私人链接对应的回复。</p>
+          </article>
+        `)
+        .join("")}
+    </section>
   `;
 }
 
@@ -1333,7 +1503,17 @@ async function handleMyContentClick(event) {
   const button = event.target.closest("button[data-action]");
   if (!button) return;
 
+  if (button.dataset.action === "view-local-question-replies") {
+    const token = button.dataset.token || "";
+    if (!token) return setStatus("这条本地记录没有可用的私人 token。", true);
+    claimToken.value = token;
+    showView("check");
+    await checkRepliesByToken(token);
+    return;
+  }
+
   const card = button.closest("[data-my-type]");
+  if (!card) return;
   const type = card.dataset.myType;
   const id = card.dataset.myId;
   const currentText = card.querySelector(".message-body")?.textContent || "";
@@ -1450,6 +1630,7 @@ async function withBusy(element, task) {
 function updateAllCounters() {
   document.querySelectorAll("[data-counter-for]").forEach((counter) => {
     const input = document.querySelector(`#${counter.dataset.counterFor}`);
+    if (!input) return;
     counter.textContent = `${input.value.length} / ${input.maxLength}`;
   });
 }

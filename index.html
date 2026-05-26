@@ -40,6 +40,7 @@
         <button class="action-button" data-view="answer" type="button">回答陌生人</button>
         <button class="action-button" data-view="check" type="button">查看回复</button>
         <button class="action-button" data-view="mine" type="button">查看我留下的内容</button>
+        <button class="action-button" data-view="feedback" type="button">意见箱</button>
       </nav>
 
       <section class="notice" aria-label="隐私提醒">
@@ -228,12 +229,46 @@
       <section class="panel" id="mine" aria-labelledby="mine-title">
         <div class="section-heading">
           <h2 id="mine-title">查看我留下的内容</h2>
-          <p>如果本浏览器还保留着本地记录，可以在这里找回旧问题的回复，也可以查看自己留下的回答和留言。</p>
+          <p>如果当前浏览器保存过本地记录，可以在这里查看自己的问题、回复和留言。</p>
         </div>
 
         <div class="mine-grid" id="my-content" aria-live="polite">
           <article class="empty-state">正在读取这个浏览器里的内容。</article>
         </div>
+      </section>
+
+      <section class="panel" id="feedback" aria-labelledby="feedback-title">
+        <div class="section-heading">
+          <h2 id="feedback-title">意见箱</h2>
+          <p>匿名留下使用反馈、问题或想法。内容只给开发者查看，不会出现在留言板。</p>
+        </div>
+
+        <form id="feedback-form" class="form">
+          <label class="toolbar-field" for="feedback-kind">
+            <span>类型</span>
+            <select id="feedback-kind" aria-label="意见类型">
+              <option value="feedback">使用反馈</option>
+              <option value="problem">遇到问题</option>
+              <option value="idea">一点想法</option>
+              <option value="other">其他</option>
+            </select>
+          </label>
+          <label for="feedback-text">内容</label>
+          <textarea
+            id="feedback-text"
+            maxlength="1000"
+            placeholder="写下你遇到的问题，或对这个网站的想法。"
+            required
+          ></textarea>
+          <div class="form-row">
+            <span class="counter" data-counter-for="feedback-text">0 / 1000</span>
+            <button type="submit">提交</button>
+          </div>
+        </form>
+
+        <p class="small feedback-note">
+          这不是公开评论区，也不是客服系统。请不要留下敏感个人信息。
+        </p>
       </section>
 
       <p class="status" id="status" role="status" aria-live="polite"></p>

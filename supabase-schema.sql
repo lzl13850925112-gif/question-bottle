@@ -59,6 +59,18 @@ CREATE TABLE IF NOT EXISTS public.answer_feedback (
   updated_at timestamptz DEFAULT now()
 );
 
+CREATE TABLE IF NOT EXISTS public.site_feedback (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  public_id text UNIQUE DEFAULT encode(gen_random_bytes(16), 'hex'),
+  feedback_kind text DEFAULT 'feedback',
+  feedback_text text,
+  owner_token_hash text,
+  status text DEFAULT 'new',
+  developer_note text,
+  created_at timestamptz DEFAULT now(),
+  reviewed_at timestamptz
+);
+
 -- 3. Migration-safe columns for existing databases
 ALTER TABLE public.questions ADD COLUMN IF NOT EXISTS public_id text DEFAULT encode(gen_random_bytes(16), 'hex');
 ALTER TABLE public.questions ADD COLUMN IF NOT EXISTS question_text text;
@@ -97,6 +109,15 @@ ALTER TABLE public.answer_feedback ADD COLUMN IF NOT EXISTS asker_liked boolean 
 ALTER TABLE public.answer_feedback ADD COLUMN IF NOT EXISTS asker_reply_text text;
 ALTER TABLE public.answer_feedback ADD COLUMN IF NOT EXISTS created_at timestamptz DEFAULT now();
 ALTER TABLE public.answer_feedback ADD COLUMN IF NOT EXISTS updated_at timestamptz DEFAULT now();
+
+ALTER TABLE public.site_feedback ADD COLUMN IF NOT EXISTS public_id text DEFAULT encode(gen_random_bytes(16), 'hex');
+ALTER TABLE public.site_feedback ADD COLUMN IF NOT EXISTS feedback_kind text DEFAULT 'feedback';
+ALTER TABLE public.site_feedback ADD COLUMN IF NOT EXISTS feedback_text text;
+ALTER TABLE public.site_feedback ADD COLUMN IF NOT EXISTS owner_token_hash text;
+ALTER TABLE public.site_feedback ADD COLUMN IF NOT EXISTS status text DEFAULT 'new';
+ALTER TABLE public.site_feedback ADD COLUMN IF NOT EXISTS developer_note text;
+ALTER TABLE public.site_feedback ADD COLUMN IF NOT EXISTS created_at timestamptz DEFAULT now();
+ALTER TABLE public.site_feedback ADD COLUMN IF NOT EXISTS reviewed_at timestamptz;
 
 -- 4. Indexes
 CREATE UNIQUE INDEX IF NOT EXISTS questions_public_id_idx
@@ -142,6 +163,15 @@ CREATE INDEX IF NOT EXISTS public_message_likes_owner_token_hash_idx
 CREATE UNIQUE INDEX IF NOT EXISTS answer_feedback_answer_id_idx
   ON public.answer_feedback (answer_id);
 
+CREATE UNIQUE INDEX IF NOT EXISTS site_feedback_public_id_idx
+  ON public.site_feedback (public_id);
+
+CREATE INDEX IF NOT EXISTS site_feedback_created_at_idx
+  ON public.site_feedback (created_at DESC);
+
+CREATE INDEX IF NOT EXISTS site_feedback_status_idx
+  ON public.site_feedback (status);
+
 -- 5. Row Level Security
 ALTER TABLE public.questions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.answers ENABLE ROW LEVEL SECURITY;
@@ -149,6 +179,7 @@ ALTER TABLE public.public_messages ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.public_message_replies ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.public_message_likes ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.answer_feedback ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.site_feedback ENABLE ROW LEVEL SECURITY;
 
 -- 6. Helper: placeholder spam/profanity check
 CREATE OR REPLACE FUNCTION public.is_blocked_text(input_text text)
@@ -171,13 +202,18 @@ END;
 $$;
 
 -- 8. RPC: submit an anonymous question
+DROP FUNCTION IF EXISTS public.submit_question(text, text, boolean, text);
+
 CREATE OR REPLACE FUNCTION public.submit_question(
   question_body text,
   claim_token_hash_value text,
   allow_public_value boolean,
   owner_token_hash_value text
 )
-RETURNS void
+RETURNS TABLE (
+  public_id text,
+  created_at timestamptz
+)
 LANGUAGE plpgsql
 SECURITY DEFINER
 SET search_path = public
@@ -201,7 +237,8 @@ BEGIN
     RAISE EXCEPTION '内容像广告或骚扰信息';
   END IF;
 
-  INSERT INTO public.questions (
+  RETURN QUERY
+  INSERT INTO public.questions AS q (
     question_text,
     claim_token_hash,
     owner_token_hash,
@@ -212,7 +249,8 @@ BEGIN
     claim_token_hash_value,
     owner_token_hash_value,
     coalesce(allow_public_value, false)
-  );
+  )
+  RETURNING q.public_id, q.created_at;
 END;
 $$;
 
@@ -456,6 +494,8 @@ END;
 $$;
 
 -- 13. RPC: read recent public anonymous messages
+DROP FUNCTION IF EXISTS public.get_public_messages(integer, text);
+
 CREATE OR REPLACE FUNCTION public.get_public_messages(
   limit_count integer,
   owner_token_hash_value text
@@ -466,6 +506,7 @@ RETURNS TABLE (
   message_text text,
   reply_count bigint,
   like_count bigint,
+  last_reply_at timestamptz,
   liked_by_me boolean,
   owned_by_me boolean,
   edited_at timestamptz,
@@ -494,6 +535,7 @@ BEGIN
     m.message_text,
     count(DISTINCT r.id)::bigint AS reply_count,
     count(DISTINCT l.id)::bigint AS like_count,
+    max(r.created_at) AS last_reply_at,
     bool_or(l.owner_token_hash = owner_token_hash_value) FILTER (
       WHERE owner_token_hash_value IS NOT NULL
     ) AS liked_by_me,
@@ -959,7 +1001,59 @@ BEGIN
 END;
 $$;
 
--- 24. Function permissions
+-- 24. RPC: submit private site feedback for local developer review
+CREATE OR REPLACE FUNCTION public.submit_site_feedback(
+  feedback_kind_value text,
+  feedback_body text,
+  owner_token_hash_value text
+)
+RETURNS TABLE (
+  public_id text,
+  created_at timestamptz
+)
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  safe_kind text;
+BEGIN
+  safe_kind := coalesce(nullif(trim(feedback_kind_value), ''), 'feedback');
+
+  IF safe_kind NOT IN ('feedback', 'problem', 'idea', 'other') THEN
+    safe_kind := 'feedback';
+  END IF;
+
+  IF length(trim(coalesce(feedback_body, ''))) < 2
+     OR length(trim(coalesce(feedback_body, ''))) > 1000 THEN
+    RAISE EXCEPTION '内容长度需要在 2 到 1000 个字符之间';
+  END IF;
+
+  IF owner_token_hash_value IS NOT NULL
+     AND NOT public.is_sha256_hex(owner_token_hash_value) THEN
+    RAISE EXCEPTION 'visitor token hash 格式不正确';
+  END IF;
+
+  IF public.is_blocked_text(feedback_body) THEN
+    RAISE EXCEPTION '内容像广告或骚扰信息';
+  END IF;
+
+  RETURN QUERY
+  INSERT INTO public.site_feedback (
+    feedback_kind,
+    feedback_text,
+    owner_token_hash
+  )
+  VALUES (
+    safe_kind,
+    trim(feedback_body),
+    owner_token_hash_value
+  )
+  RETURNING site_feedback.public_id, site_feedback.created_at;
+END;
+$$;
+
+-- 25. Function permissions
 GRANT USAGE ON SCHEMA public TO anon;
 GRANT EXECUTE ON FUNCTION public.submit_question(text, text, boolean, text) TO anon;
 GRANT EXECUTE ON FUNCTION public.get_random_question(integer, text[]) TO anon;
@@ -978,10 +1072,11 @@ GRANT EXECUTE ON FUNCTION public.update_my_question(text, text, text) TO anon;
 GRANT EXECUTE ON FUNCTION public.delete_my_question(text, text) TO anon;
 GRANT EXECUTE ON FUNCTION public.like_answer_by_asker(text, text) TO anon;
 GRANT EXECUTE ON FUNCTION public.send_asker_reply(text, text, text) TO anon;
+GRANT EXECUTE ON FUNCTION public.submit_site_feedback(text, text, text) TO anon;
 
 NOTIFY pgrst, 'reload schema';
 
--- 25. Read-only diagnostics for Supabase SQL Editor
+-- 26. Read-only diagnostics for Supabase SQL Editor
 WITH required_tables(object_name) AS (
   VALUES
     ('public.questions'),
@@ -989,7 +1084,8 @@ WITH required_tables(object_name) AS (
     ('public.public_messages'),
     ('public.public_message_replies'),
     ('public.public_message_likes'),
-    ('public.answer_feedback')
+    ('public.answer_feedback'),
+    ('public.site_feedback')
 ),
 required_columns(table_name, column_name) AS (
   VALUES
@@ -1017,7 +1113,15 @@ required_columns(table_name, column_name) AS (
     ('answer_feedback', 'answer_id'),
     ('answer_feedback', 'asker_liked'),
     ('answer_feedback', 'asker_reply_text'),
-    ('answer_feedback', 'updated_at')
+    ('answer_feedback', 'updated_at'),
+    ('site_feedback', 'public_id'),
+    ('site_feedback', 'feedback_kind'),
+    ('site_feedback', 'feedback_text'),
+    ('site_feedback', 'owner_token_hash'),
+    ('site_feedback', 'status'),
+    ('site_feedback', 'developer_note'),
+    ('site_feedback', 'created_at'),
+    ('site_feedback', 'reviewed_at')
 ),
 required_functions(object_name, regproc_name) AS (
   VALUES
@@ -1036,7 +1140,8 @@ required_functions(object_name, regproc_name) AS (
     ('public.update_my_question(text,text,text)', 'public.update_my_question(text,text,text)'),
     ('public.delete_my_question(text,text)', 'public.delete_my_question(text,text)'),
     ('public.like_answer_by_asker(text,text)', 'public.like_answer_by_asker(text,text)'),
-    ('public.send_asker_reply(text,text,text)', 'public.send_asker_reply(text,text,text)')
+    ('public.send_asker_reply(text,text,text)', 'public.send_asker_reply(text,text,text)'),
+    ('public.submit_site_feedback(text,text,text)', 'public.submit_site_feedback(text,text,text)')
 )
 SELECT
   'table' AS check_type,

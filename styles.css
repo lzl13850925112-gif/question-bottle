@@ -209,6 +209,12 @@ button:disabled {
   align-items: start;
 }
 
+.admin-shell {
+  width: min(920px, calc(100% - 40px));
+  margin: 0 auto;
+  padding: 42px 0 76px;
+}
+
 .side-rail {
   position: sticky;
   top: 22px;
@@ -412,6 +418,10 @@ h3 {
   margin-top: 0;
   padding: 34px;
   box-shadow: var(--shadow);
+}
+
+.admin-panel {
+  display: block;
 }
 
 .panel.is-active {
@@ -732,6 +742,31 @@ select:focus {
   flex-wrap: wrap;
   gap: 8px;
   margin-top: 13px;
+}
+
+.feedback-note {
+  margin: 16px 0 0;
+}
+
+.admin-connect {
+  margin-bottom: 18px;
+}
+
+.admin-connect textarea {
+  min-height: 92px;
+}
+
+.admin-feedback-card {
+  display: grid;
+  gap: 14px;
+}
+
+.admin-note {
+  min-height: 86px;
+}
+
+.compact-field {
+  min-width: 128px;
 }
 
 .inline-replies {

@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="zh-Hans">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>意见箱本地整理</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <main class="admin-shell">
+      <section class="panel is-active admin-panel" aria-labelledby="admin-title">
+        <div class="section-heading">
+          <p class="eyebrow">本地开发者页面</p>
+          <h1 id="admin-title">意见箱整理</h1>
+          <p>
+            这个页面只用于本地查看和整理匿名反馈。不要在公开环境输入 service role key。
+          </p>
+        </div>
+
+        <form id="admin-connect-form" class="form admin-connect">
+          <label for="admin-supabase-url">Supabase URL</label>
+          <input
+            id="admin-supabase-url"
+            autocomplete="off"
+            placeholder="https://xxxx.supabase.co"
+            required
+          />
+          <label for="admin-service-key">Service role key</label>
+          <textarea
+            id="admin-service-key"
+            autocomplete="off"
+            maxlength="3000"
+            placeholder="只在本地临时粘贴，不会自动保存。"
+            required
+          ></textarea>
+          <div class="form-row">
+            <span class="small">用于读取 site_feedback 表。</span>
+            <button type="submit">读取反馈</button>
+          </div>
+        </form>
+
+        <div class="section-toolbar">
+          <label class="toolbar-field" for="admin-status-filter">
+            <span>状态</span>
+            <select id="admin-status-filter">
+              <option value="all">全部</option>
+              <option value="new">未处理</option>
+              <option value="reviewing">处理中</option>
+              <option value="done">已整理</option>
+              <option value="ignored">暂不处理</option>
+            </select>
+          </label>
+          <button id="admin-refresh" class="secondary" type="button">刷新</button>
+        </div>
+
+        <div class="message-list" id="admin-feedback-list" aria-live="polite">
+          <article class="empty-state">连接后显示反馈。</article>
+        </div>
+        <p class="status" id="admin-status" role="status" aria-live="polite"></p>
+      </section>
+    </main>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="./feedback-admin.js"></script>
+  </body>
+</html>
