@@ -11,6 +11,7 @@ const state = {
   hiddenPublicMessageIds: [],
   linkedPublicMessageId: "",
   visitorToken: "",
+  hadStoredVisitorToken: false,
   ownerTokenHash: "",
   currentClaimTokenHash: ""
 };
@@ -18,6 +19,7 @@ const state = {
 const RECENT_QUESTIONS_KEY = "questionBottle.recentQuestionIds";
 const VISITOR_TOKEN_KEY = "questionBottle.visitorToken";
 const HIDDEN_PUBLIC_MESSAGES_KEY = "questionBottle.hiddenPublicMessageIds";
+const LOCAL_QUESTION_TOKENS_KEY = "questionBottle.localQuestionTokens";
 const MAX_RECENT_QUESTIONS = 12;
 const PUBLIC_MESSAGE_COLLAPSE_LENGTH = 140;
 const PUBLIC_MESSAGE_FOCUS_MS = 1600;
@@ -109,8 +111,8 @@ const SEED_QUESTIONS = [...new Set(SEED_QUESTION_TEXTS)].map((text, index) => ({
 }));
 
 const SITE_NOTE = {
-  version: "2.3",
-  text: "添加了一些功能上的细节。"
+  version: "2.5",
+  text: "可以用本设备保留的本地记录，尝试找回旧问题的回复。"
 };
 
 const statusEl = document.querySelector("#status");
@@ -172,6 +174,7 @@ async function init() {
     return;
   }
 
+  state.hadStoredVisitorToken = hasStoredVisitorToken();
   state.visitorToken = getVisitorToken();
   state.ownerTokenHash = await sha256(state.visitorToken);
   state.hiddenPublicMessageIds = getHiddenPublicMessageIds();
@@ -298,6 +301,7 @@ async function submitPublicMessage(event) {
     if (error) throw error;
     publicMessageForm.reset();
     updateAllCounters();
+    state.hadStoredVisitorToken = true;
     setStatus("留言已发布。");
     await loadPublicMessages();
   });
@@ -728,9 +732,11 @@ async function submitQuestion(event) {
     url.searchParams.set("token", token);
     claimLink.value = url.toString();
     claimResult.hidden = false;
+    await rememberSubmittedQuestionToken(text, token);
+    state.hadStoredVisitorToken = true;
     questionForm.reset();
     updateAllCounters();
-    setStatus("问题已保存。请保存私人链接。");
+    setStatus("问题已保存。也可以稍后在“我的内容”里查看。");
   });
 }
 
@@ -867,6 +873,7 @@ async function submitAnswer(event) {
       '<p class="muted">回答已发送。你可以再抽一个问题。</p>';
     resetAnswerFormForQuestion();
     updateAllCounters();
+    state.hadStoredVisitorToken = true;
     setStatus("回答已保存。");
   });
 }
@@ -926,6 +933,10 @@ async function checkReplies(event) {
   const token = extractToken(claimToken.value);
   if (!token) return setStatus("请输入私人链接或 token。", true);
 
+  await checkRepliesByToken(token);
+}
+
+async function checkRepliesByToken(token) {
   const tokenHash = await sha256(token);
   state.currentClaimTokenHash = tokenHash;
 
@@ -939,7 +950,8 @@ async function checkReplies(event) {
   });
 }
 
-function renderReplies(rows) {
+function renderReplies(rows, options = {}) {
+  const allowFeedback = options.allowFeedback !== false;
   if (!rows.length) {
     replyList.innerHTML =
       '<div class="reply-item"><p class="muted">没有找到这个 token 对应的问题，或暂时还没有回复。</p></div>';
@@ -958,7 +970,7 @@ function renderReplies(rows) {
               <p>${escapeHtml(row.answer_text)}</p>
               ${row.asker_liked ? '<p class="reply-meta">你已喜欢这条回复</p>' : ""}
               ${row.asker_reply_text ? `<div class="inline-reply"><p class="reply-meta">你的补充回复</p><p>${escapeHtml(row.asker_reply_text)}</p></div>` : ""}
-              ${row.answer_public_id ? `
+              ${allowFeedback && row.answer_public_id ? `
                 <div class="content-actions">
                   <button class="secondary mini-button" data-action="like-answer" type="button">${row.asker_liked ? "已喜欢" : "喜欢这条回复"}</button>
                 </div>
@@ -1087,6 +1099,10 @@ function getVisitorToken() {
   return token;
 }
 
+function hasStoredVisitorToken() {
+  return Boolean(localStorage.getItem(VISITOR_TOKEN_KEY));
+}
+
 function createToken() {
   const bytes = new Uint8Array(24);
   crypto.getRandomValues(bytes);
@@ -1136,6 +1152,42 @@ function clearRecentQuestionIds() {
   localStorage.removeItem(RECENT_QUESTIONS_KEY);
 }
 
+function getLocalQuestionTokens() {
+  try {
+    const tokens = JSON.parse(localStorage.getItem(LOCAL_QUESTION_TOKENS_KEY) || "{}");
+    return tokens && typeof tokens === "object" ? tokens : {};
+  } catch {
+    return {};
+  }
+}
+
+function rememberLocalQuestionToken(publicId, token) {
+  if (!publicId || !token) return;
+
+  const tokens = getLocalQuestionTokens();
+  tokens[publicId] = token;
+  localStorage.setItem(LOCAL_QUESTION_TOKENS_KEY, JSON.stringify(tokens));
+}
+
+function getLocalQuestionToken(publicId) {
+  return getLocalQuestionTokens()[publicId] || "";
+}
+
+async function rememberSubmittedQuestionToken(questionBody, token) {
+  if (!state.client || !state.ownerTokenHash) return;
+
+  const { data, error } = await state.client.rpc("get_my_content", {
+    owner_token_hash_value: state.ownerTokenHash
+  });
+  if (error) return;
+
+  const question = (data || [])
+    .filter((item) => item.item_type === "question" && item.body === questionBody)
+    .sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0))[0];
+
+  if (question?.public_id) rememberLocalQuestionToken(question.public_id, token);
+}
+
 function getHiddenPublicMessageIds() {
   try {
     const ids = JSON.parse(localStorage.getItem(HIDDEN_PUBLIC_MESSAGES_KEY) || "[]");
@@ -1183,6 +1235,12 @@ function renderSeedQuestionNotice() {
 async function loadMyContent() {
   if (!state.client || !state.ownerTokenHash) return;
 
+  if (!state.hadStoredVisitorToken) {
+    myContent.innerHTML =
+      '<article class="empty-state">这台设备里没有找到本地记录。可能是更换设备、清理浏览器数据或使用无痕模式导致。</article>';
+    return;
+  }
+
   myContent.innerHTML = '<article class="empty-state">正在读取这个浏览器里的内容。</article>';
   const { data, error } = await state.client.rpc("get_my_content", {
     owner_token_hash_value: state.ownerTokenHash
@@ -1228,14 +1286,18 @@ function renderMySection(title, items, type) {
           const canEditQuestion = type === "question" && Number(item.reply_count || 0) === 0;
           const canEditMessage = type === "public_message";
           const canDelete = type !== "answer";
+          const localToken = type === "question" ? getLocalQuestionToken(item.public_id) : "";
           return `
             <article class="content-card" data-my-type="${type}" data-my-id="${escapeHtml(item.public_id)}">
               <p class="message-meta">${formatDate(item.created_at)}${item.edited_at ? ` · 已于 ${formatDate(item.edited_at)} 编辑过` : ""}${item.reply_count ? ` · ${Number(item.reply_count)} 条回复` : ""}</p>
               <p class="message-body">${escapeHtml(item.body)}</p>
               <div class="content-actions">
+                ${localToken ? '<button class="secondary mini-button" data-action="view-replies" type="button">查看回复</button>' : ""}
+                ${type === "question" && !localToken ? '<button class="secondary mini-button" data-action="recover-replies" type="button">找回回复</button>' : ""}
                 ${canEditQuestion || canEditMessage ? '<button class="secondary mini-button" data-action="edit-my" type="button">编辑</button>' : ""}
                 ${canDelete ? '<button class="secondary mini-button danger-button" data-action="delete-my" type="button">删除</button>' : ""}
               </div>
+              ${type === "question" && !localToken ? '<p class="message-meta">如果这是旧问题，可以尝试用本设备记录找回回复。</p>' : ""}
             </article>
           `;
         })
@@ -1253,6 +1315,20 @@ async function handleMyContentClick(event) {
   const id = card.dataset.myId;
   const currentText = card.querySelector(".message-body")?.textContent || "";
 
+  if (button.dataset.action === "view-replies") {
+    const token = getLocalQuestionToken(id);
+    if (!token) return setStatus("这个问题没有保存在本浏览器的私人 token。", true);
+    claimToken.value = token;
+    showView("check");
+    await checkRepliesByToken(token);
+  }
+
+  if (button.dataset.action === "recover-replies") {
+    showView("check");
+    claimToken.value = "";
+    await recoverRepliesByOwnedQuestion(id);
+  }
+
   if (button.dataset.action === "edit-my") {
     const nextText = prompt("修改内容", currentText);
     if (nextText === null) return;
@@ -1263,6 +1339,28 @@ async function handleMyContentClick(event) {
     if (!confirm("删除这条内容？")) return;
     await deleteMyContent(type, id);
   }
+}
+
+async function recoverRepliesByOwnedQuestion(questionPublicId) {
+  if (!state.client || !state.ownerTokenHash) return;
+
+  state.currentClaimTokenHash = "";
+  await withBusy(checkForm, async () => {
+    const { data, error } = await state.client.rpc("get_my_question_replies", {
+      owner_token_hash_value: state.ownerTokenHash,
+      question_public_id_value: questionPublicId
+    });
+
+    if (isMissingRpc(error)) {
+      replyList.innerHTML =
+        '<div class="reply-item"><p class="muted">这个找回入口需要更新数据库函数后才能使用。</p></div>';
+      setStatus("");
+      return;
+    }
+
+    if (error) throw error;
+    renderReplies(data || [], { allowFeedback: false });
+  });
 }
 
 async function editMyContent(type, id, value) {
