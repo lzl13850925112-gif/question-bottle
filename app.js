@@ -5,9 +5,12 @@ const state = {
   client: null,
   publicMessages: [],
   visiblePublicMessages: [],
+  polls: [],
   publicFilterMode: "default",
   publicSortMode: "newest_first",
+  questionTypeFilter: "all",
   questionPoolFilter: "all",
+  answerQuestionTypeFilter: "all",
   hiddenPublicMessageIds: [],
   savedMessages: {},
   quietMode: false,
@@ -29,6 +32,8 @@ const QUIET_MODE_KEY = "questionBottle.quietMode";
 const LANGUAGE_KEY = "questionBottle.language";
 const SEEN_QUESTIONS_META_KEY = "questionBottle.seenQuestionMeta";
 const THEME_KEY = "questionBottle.theme";
+const POLL_VOTES_KEY = "questionBottle.pollVotes";
+const POLLS_FRONTEND_ENABLED = window.BOTTLE_ENABLE_POLLS === true;
 const MAX_RECENT_QUESTIONS = 12;
 const PUBLIC_MESSAGE_COLLAPSE_LENGTH = 140;
 const PUBLIC_MESSAGE_FOCUS_MS = 1600;
@@ -120,7 +125,7 @@ const SEED_QUESTIONS = [...new Set(SEED_QUESTION_TEXTS)].map((text, index) => ({
 }));
 
 const SITE_NOTE = {
-  version: "5.0",
+  version: "6.0",
   textKey: "update.text"
 };
 
@@ -130,19 +135,21 @@ const I18N = {
     "app.eyebrow": "匿名留言 · 问题漂流瓶",
     "app.intro": "可以匿名发一条短留言，也可以留下问题等别人回答。这里不需要账号，也不会显示名字。",
     "app.privacy": "这里不使用账号。其他人不会看到是谁写的内容。网站只用一个保存在你浏览器里的本地 token，帮你管理自己的内容。请不要提交敏感个人信息；托管和数据库服务仍可能有技术日志。",
-    "update.text": "加入底部 dock、本地收藏、重新漂流和更安静的空间节奏。",
+    "update.text": "整理了整体结构，新增了一些新的功能和浏览方式。",
     "theme.night": "夜间",
     "theme.day": "日间",
     "theme.grass": "青草",
     "theme.orange": "橘子",
     "theme.ocean": "海洋",
     "theme.tree": "树木",
+    "theme.rainbow": "彩虹",
     "nav.board": "留言板",
     "nav.ask": "留下问题",
     "nav.answer": "回答陌生人",
     "nav.check": "查看回复",
     "nav.mine": "查看我留下的内容",
     "nav.saved": "本地收藏",
+    "nav.more": "更多功能",
     "nav.feedback": "意见箱",
     "dock.board": "留言",
     "dock.answer": "漂流",
@@ -150,6 +157,22 @@ const I18N = {
     "dock.mine": "我的",
     "dock.saved": "收藏",
     "dock.feedback": "意见",
+    "dock.more": "更多",
+    "dock.settings": "设置",
+    "tips.title": "提示",
+    "settings.eyebrow": "设置",
+    "settings.title": "设置",
+    "settings.appearance": "外观",
+    "faq.title": "常见问题",
+    "faq.vpnQuestion": "为什么需要 VPN 访问？",
+    "faq.vpnAnswer": "网站部署在海外服务上，不同网络环境访问速度可能不同。如果打不开，换个网络或使用稳定的代理可能会更顺。",
+    "faq.copyQuestion": "复制公共留言板的链接可以干些什么？",
+    "faq.copyAnswer": "它可以直接打开某条公开留言，方便稍后回来，或发给朋友看同一条内容。私人链接仍然只用于查看自己的回复。",
+    "siteInfo.title": "网站信息",
+    "siteInfo.project": "这是 Figaro 和 OpenAI 工具一起搭建与维护的匿名留言空间。",
+    "siteInfo.author": "作者",
+    "siteInfo.copyright": "© Figaro. 内容与界面仍在持续实验和维护中，请不要复制为误导性的同名服务。",
+    "siteInfo.privacy": "网站围绕匿名使用设计：没有账号系统，普通匿名内容不会连接到真实身份；用于找回本机内容的 owner token 会先在浏览器中哈希后再提交。开发者通常不能从正常匿名流程中直接识别具体用户。也请理解，没有任何联网系统能承诺绝对匿名；托管、数据库和网络服务仍可能处理请求。如果未来出现违法滥用，可能需要适度管理。",
     "stage.current": "当前空间",
     "actions.random": "随机浏览",
     "actions.resurface": "重新漂流",
@@ -189,11 +212,21 @@ const I18N = {
     "board.messages": "留言",
     "controls.filter": "筛选",
     "controls.sort": "排序",
+    "controls.type": "类型",
     "filter.default": "全部",
     "filter.unanswered": "只看未回复",
     "filter.related": "和我有关",
     "filter.questions": "公开问答",
     "filter.messages": "普通留言",
+    "filter.polls": "投票",
+    "questionType.all": "全部",
+    "questionType.life": "生活",
+    "questionType.relationships": "关系",
+    "questionType.memory": "回忆",
+    "questionType.mood": "情绪",
+    "questionType.study": "学习",
+    "questionType.ai": "AI",
+    "questionType.other": "其他",
     "sort.newest": "最新在前",
     "sort.replied": "最近有回应",
     "sort.oldest": "最早在前",
@@ -227,6 +260,32 @@ const I18N = {
     "mine.description": "如果当前浏览器保存过本地记录，可以在这里查看自己的问题、回复和留言。",
     "saved.title": "本地收藏",
     "saved.description": "只保存在当前浏览器里的内容。可以稍后重新打开、重新漂流。",
+    "more.title": "更多功能",
+    "more.description": "一些不适合放在主界面的小功能，会先安静地放在这里。",
+    "more.feedback": "去意见箱",
+    "more.settings": "打开设置",
+    "more.pollsLater": "投票功能已经先收进这里，等后端数据库迁移审批后再开放。",
+    "poll.title": "匿名投票",
+    "poll.description": "创建 2 到 4 个选项的小投票。数据库迁移审批并执行后即可开放。",
+    "poll.questionLabel": "投票问题",
+    "poll.questionPlaceholder": "例如：今晚你更想做什么？",
+    "poll.optionPlaceholder1": "选项 1",
+    "poll.optionPlaceholder2": "选项 2",
+    "poll.optionPlaceholder3": "选项 3（可选）",
+    "poll.optionPlaceholder4": "选项 4（可选）",
+    "poll.keepPublic": "结束后仍保留公开结果。",
+    "poll.localHint": "不需要邮箱、手机号或登录；本机 token 会用于避免重复投票。",
+    "poll.create": "创建投票",
+    "poll.refresh": "刷新投票",
+    "poll.loading": "正在读取投票。",
+    "poll.empty": "还没有正在进行的投票。",
+    "poll.missing": "投票功能需要先应用 6.0 数据库迁移。",
+    "poll.vote": "投票",
+    "poll.voted": "已投",
+    "poll.total": "{count} 票",
+    "poll.alreadyVoted": "这台设备已经投过票。",
+    "poll.end": "结束投票",
+    "poll.closed": "已结束",
     "feedback.title": "意见箱",
     "feedback.description": "匿名留下使用反馈、问题或想法。内容只给开发者查看，不会出现在留言板。",
     "feedback.type": "类型",
@@ -249,9 +308,9 @@ const I18N = {
     "guide.step4Title": "翻译",
     "guide.step4Body": "现在只是预留入口。不会调用翻译 API，也不会产生额外成本。",
     "guide.step5Title": "主题",
-    "guide.step5Body": "左上角的调色板可以切换夜间、日间、青草、橘子、海洋和树木。选择会留在当前浏览器。",
+    "guide.step5Body": "设置里可以切换夜间、日间、青草、橘子、海洋、树木和彩虹。选择会留在当前浏览器。",
     "guide.step6Title": "语言",
-    "guide.step6Body": "地球按钮可以切换中文和 English。选择会保存在当前浏览器。",
+    "guide.step6Body": "设置里可以切换中文和 English。选择会保存在当前浏览器。",
     "guide.step7Title": "收藏",
     "guide.step7Body": "看到想稍后再读的内容，可以先收藏；也可以让它重新漂流。收藏只保存在这台设备里。",
     "guide.step8Title": "意见箱",
@@ -295,19 +354,21 @@ const I18N = {
     "app.eyebrow": "Anonymous notes · question bottle",
     "app.intro": "Leave a short anonymous note, or send a question for someone to answer. No account. No names.",
     "app.privacy": "No account is used here. Other visitors will not see who wrote something. A local browser token helps keep your own content together. Please do not submit sensitive personal information; hosting and database services may still keep technical logs.",
-    "update.text": "Adds the bottom dock, local saves, resurfacing, and a quieter spatial rhythm.",
+    "update.text": "Reorganized the overall structure and added several new ways to browse and interact.",
     "theme.night": "Night",
     "theme.day": "Day",
     "theme.grass": "Grass",
     "theme.orange": "Orange",
     "theme.ocean": "Ocean",
     "theme.tree": "Tree",
+    "theme.rainbow": "Rainbow",
     "nav.board": "Board",
     "nav.ask": "Ask",
     "nav.answer": "Drift",
     "nav.check": "Replies",
     "nav.mine": "My content",
     "nav.saved": "Saved",
+    "nav.more": "More",
     "nav.feedback": "Feedback",
     "dock.board": "Notes",
     "dock.answer": "Drift",
@@ -315,6 +376,22 @@ const I18N = {
     "dock.mine": "Mine",
     "dock.saved": "Saved",
     "dock.feedback": "Feedback",
+    "dock.more": "More",
+    "dock.settings": "Settings",
+    "tips.title": "Tips",
+    "settings.eyebrow": "Settings",
+    "settings.title": "Settings",
+    "settings.appearance": "Appearance",
+    "faq.title": "FAQ",
+    "faq.vpnQuestion": "Why might I need a VPN?",
+    "faq.vpnAnswer": "The site is hosted on overseas services, so access speed can vary by network. If it does not open, another network or a stable proxy may help.",
+    "faq.copyQuestion": "What can a public board link do?",
+    "faq.copyAnswer": "It opens a specific public note, so you can return later or show someone the same item. Private links are still only for checking your own replies.",
+    "siteInfo.title": "Site Info",
+    "siteInfo.project": "This anonymous space is built and maintained by Figaro with OpenAI tools.",
+    "siteInfo.author": "Author",
+    "siteInfo.copyright": "© Figaro. The content and interface are still being maintained and experimented with; please do not copy it as a misleading service with the same identity.",
+    "siteInfo.privacy": "The site is designed around anonymous use: there is no account system, ordinary anonymous content is not connected to real identity, and owner tokens used for local recovery are hashed in the browser before submission. The developer generally cannot identify specific visitors from normal anonymous flows. Still, no online system can promise absolute anonymity; hosting, database, and network providers may process requests. If illegal abuse appears in the future, light moderation may be needed.",
     "stage.current": "Current space",
     "actions.random": "Random",
     "actions.resurface": "Resurface",
@@ -354,11 +431,21 @@ const I18N = {
     "board.messages": "Notes",
     "controls.filter": "Filter",
     "controls.sort": "Sort",
+    "controls.type": "Type",
     "filter.default": "All",
     "filter.unanswered": "No replies",
     "filter.related": "Related to me",
     "filter.questions": "Public Q&A",
     "filter.messages": "Notes only",
+    "filter.polls": "Polls",
+    "questionType.all": "All",
+    "questionType.life": "Life",
+    "questionType.relationships": "Relationships",
+    "questionType.memory": "Memory",
+    "questionType.mood": "Mood",
+    "questionType.study": "Study",
+    "questionType.ai": "AI",
+    "questionType.other": "Other",
     "sort.newest": "Newest",
     "sort.replied": "Recently replied",
     "sort.oldest": "Oldest",
@@ -392,6 +479,32 @@ const I18N = {
     "mine.description": "If this browser has local records, you can see your questions, replies, and notes here.",
     "saved.title": "Local saves",
     "saved.description": "Saved only in this browser. Reopen or resurface later.",
+    "more.title": "More",
+    "more.description": "Small experimental features that should not crowd the main space will live here first.",
+    "more.feedback": "Go to Feedback",
+    "more.settings": "Open Settings",
+    "more.pollsLater": "Polls are parked here and will open after the backend database migration is approved.",
+    "poll.title": "Anonymous polls",
+    "poll.description": "Create a small poll with 2 to 4 options. It can open after the database migration is approved and applied.",
+    "poll.questionLabel": "Poll question",
+    "poll.questionPlaceholder": "For example: What would you rather do tonight?",
+    "poll.optionPlaceholder1": "Option 1",
+    "poll.optionPlaceholder2": "Option 2",
+    "poll.optionPlaceholder3": "Option 3 (optional)",
+    "poll.optionPlaceholder4": "Option 4 (optional)",
+    "poll.keepPublic": "Keep public results after ending.",
+    "poll.localHint": "No email, phone, or login is used; this browser token prevents repeat votes.",
+    "poll.create": "Create poll",
+    "poll.refresh": "Refresh polls",
+    "poll.loading": "Reading polls.",
+    "poll.empty": "No active polls yet.",
+    "poll.missing": "Polls need the 6.0 database migration first.",
+    "poll.vote": "Vote",
+    "poll.voted": "Voted",
+    "poll.total": "{count} votes",
+    "poll.alreadyVoted": "This device has already voted.",
+    "poll.end": "End poll",
+    "poll.closed": "Ended",
     "feedback.title": "Feedback",
     "feedback.description": "Leave anonymous feedback, issues, or ideas. It is only for the developer and will not appear on the board.",
     "feedback.type": "Type",
@@ -414,9 +527,9 @@ const I18N = {
     "guide.step4Title": "Translate",
     "guide.step4Body": "This is only a placeholder for now. No translation API is called, and no extra cost is created.",
     "guide.step5Title": "Themes",
-    "guide.step5Body": "Use the palette button in the upper-left area to switch Night, Day, Grass, Orange, Ocean, and Tree. The choice stays in this browser.",
+    "guide.step5Body": "Use Settings to switch Night, Day, Grass, Orange, Ocean, Tree, and Rainbow. The choice stays in this browser.",
     "guide.step6Title": "Language",
-    "guide.step6Body": "Use the globe button to switch Chinese and English. The choice is saved in this browser.",
+    "guide.step6Body": "Use Settings to switch Chinese and English. The choice is saved in this browser.",
     "guide.step7Title": "Saved",
     "guide.step7Body": "Save anything you may want to read later, or let it resurface. Saves stay only on this device.",
     "guide.step8Title": "Feedback",
@@ -479,14 +592,18 @@ const resurfaceContentButton = document.querySelector("#resurface-content");
 const quietToggle = document.querySelector("#quiet-toggle");
 const openGuideButton = document.querySelector("#open-guide");
 const openTranslationButton = document.querySelector("#open-translation");
+const openSettingsButtons = [...document.querySelectorAll("#open-settings, #dock-open-settings, #more-open-settings")];
 const guideSheet = document.querySelector("#guide-sheet");
 const translationSheet = document.querySelector("#translation-sheet");
+const settingsSheet = document.querySelector("#settings-sheet");
 
 const publicMessageForm = document.querySelector("#public-message-form");
 const publicMessageText = document.querySelector("#public-message-text");
 const publicMessageList = document.querySelector("#public-message-list");
 const publicMessageFilter = document.querySelector("#public-message-filter");
 const publicMessageSort = document.querySelector("#public-message-sort");
+const questionTypeFilter = document.querySelector("#question-type-filter");
+const boardPollList = document.querySelector("#board-poll-list");
 const randomPublicMessageButton = document.querySelector("#random-public-message");
 const restoreHiddenMessagesButton = document.querySelector("#restore-hidden-messages");
 const refreshMessagesButton = document.querySelector("#refresh-messages");
@@ -501,6 +618,7 @@ const copyClaimLink = document.querySelector("#copy-claim-link");
 const loadQuestionButton = document.querySelector("#load-question");
 const skipQuestionButton = document.querySelector("#skip-question");
 const questionPoolFilter = document.querySelector("#question-pool-filter");
+const answerQuestionTypeFilter = document.querySelector("#answer-question-type-filter");
 const randomQuestionCard = document.querySelector("#random-question-card");
 const answerForm = document.querySelector("#answer-form");
 const answerText = document.querySelector("#answer-text");
@@ -518,6 +636,15 @@ const savedContent = document.querySelector("#saved-content");
 const feedbackForm = document.querySelector("#feedback-form");
 const feedbackKind = document.querySelector("#feedback-kind");
 const feedbackText = document.querySelector("#feedback-text");
+const pollForm = document.querySelector("#poll-form");
+const pollQuestion = document.querySelector("#poll-question");
+const pollOptionInputs = [...document.querySelectorAll(".poll-option-input")];
+const pollKeepPublic = document.querySelector("#poll-keep-public");
+const pollList = document.querySelector("#poll-list");
+const refreshPollsButton = document.querySelector("#more-refresh-polls");
+const disabledPollNote = document.querySelector(".disabled-feature-note");
+const pollPanel = document.querySelector(".poll-panel");
+const pollFilterOption = document.querySelector('option[value="poll_posts"]');
 
 init();
 
@@ -528,6 +655,7 @@ async function init() {
   renderRhythmState();
   bindNavigation();
   bindCounters();
+  configurePollVisibility();
   bindForms();
   renderSiteNote();
   renderSeedQuestionNotice();
@@ -555,7 +683,22 @@ async function init() {
     config.supabaseAnonKey
   );
   await loadPublicMessages();
+  if (POLLS_FRONTEND_ENABLED) await loadPolls();
   updateLocalSummary();
+}
+
+function configurePollVisibility() {
+  if (disabledPollNote) disabledPollNote.hidden = POLLS_FRONTEND_ENABLED;
+  if (pollPanel) pollPanel.hidden = !POLLS_FRONTEND_ENABLED;
+  if (refreshPollsButton) {
+    refreshPollsButton.hidden = !POLLS_FRONTEND_ENABLED;
+    refreshPollsButton.disabled = !POLLS_FRONTEND_ENABLED;
+  }
+  if (boardPollList) boardPollList.hidden = !POLLS_FRONTEND_ENABLED;
+  if (pollFilterOption) {
+    pollFilterOption.hidden = !POLLS_FRONTEND_ENABLED;
+    pollFilterOption.disabled = !POLLS_FRONTEND_ENABLED;
+  }
 }
 
 function t(key) {
@@ -688,12 +831,16 @@ function bindForms() {
   publicMessageForm.addEventListener("submit", submitPublicMessage);
   publicMessageFilter?.addEventListener("change", handlePublicFilterChange);
   publicMessageSort?.addEventListener("change", handlePublicSortChange);
+  questionTypeFilter?.addEventListener("change", handleQuestionTypeFilterChange);
   randomPublicMessageButton?.addEventListener("click", showRandomPublicMessage);
   floatRandomMessageButton?.addEventListener("click", showRandomPublicMessage);
   resurfaceContentButton?.addEventListener("click", resurfaceLocalContent);
   quietToggle?.addEventListener("click", toggleQuietMode);
   openGuideButton?.addEventListener("click", () => openSheet(guideSheet));
   openTranslationButton?.addEventListener("click", () => openSheet(translationSheet));
+  openSettingsButtons.forEach((button) => {
+    button?.addEventListener("click", () => openSheet(settingsSheet));
+  });
   themeTrigger?.addEventListener("click", (event) => {
     event.stopPropagation();
     closeLanguageMenu();
@@ -723,18 +870,27 @@ function bindForms() {
   refreshMessagesButton.addEventListener("click", loadPublicMessages);
   publicMessageList.addEventListener("click", handlePublicMessageClick);
   publicMessageList.addEventListener("submit", submitPublicReply);
+  if (POLLS_FRONTEND_ENABLED) {
+    boardPollList?.addEventListener("click", handlePollClick);
+  }
   replyList.addEventListener("click", handleReplyListClick);
   replyList.addEventListener("submit", submitAskerReply);
   myContent.addEventListener("click", handleMyContentClick);
   savedContent?.addEventListener("click", handleSavedContentClick);
   questionForm.addEventListener("submit", submitQuestion);
   questionPoolFilter?.addEventListener("change", handleQuestionPoolFilterChange);
+  answerQuestionTypeFilter?.addEventListener("change", handleAnswerQuestionTypeFilterChange);
   loadQuestionButton.addEventListener("click", loadRandomQuestion);
   skipQuestionButton.addEventListener("click", loadRandomQuestion);
   answerForm.addEventListener("submit", submitAnswer);
   checkForm.addEventListener("submit", checkReplies);
   copyClaimLink.addEventListener("click", copyClaim);
   feedbackForm?.addEventListener("submit", submitSiteFeedback);
+  if (POLLS_FRONTEND_ENABLED) {
+    pollForm?.addEventListener("submit", submitPoll);
+    pollList?.addEventListener("click", handlePollClick);
+    refreshPollsButton?.addEventListener("click", loadPolls);
+  }
   themeButtons.forEach((button) => {
     button.addEventListener("click", () => setTheme(button.dataset.themeChoice));
   });
@@ -795,7 +951,7 @@ function closeSheets() {
     sheet.classList.remove("is-open");
     window.setTimeout(() => {
       sheet.hidden = true;
-    }, 180);
+    }, 420);
   });
 }
 
@@ -821,7 +977,7 @@ function initTheme() {
 }
 
 function setTheme(theme, shouldPersist = true) {
-  const safeTheme = ["night", "day", "grass", "orange", "ocean", "tree"].includes(
+  const safeTheme = ["night", "day", "grass", "orange", "ocean", "tree", "rainbow"].includes(
     theme
   )
     ? theme
@@ -833,7 +989,7 @@ function setTheme(theme, shouldPersist = true) {
       document.documentElement.classList.add("theme-transitioning");
       window.setTimeout(() => {
         document.documentElement.classList.remove("theme-transitioning");
-      }, 620);
+      }, 1120);
     });
   }
   document.documentElement.dataset.theme = safeTheme;
@@ -846,7 +1002,7 @@ function setTheme(theme, shouldPersist = true) {
 }
 
 function updateThemeLabel(theme) {
-  const safeTheme = ["night", "day", "grass", "orange", "ocean", "tree"].includes(theme)
+  const safeTheme = ["night", "day", "grass", "orange", "ocean", "tree", "rainbow"].includes(theme)
     ? theme
     : "night";
   if (currentThemeLabel) currentThemeLabel.textContent = t(`theme.${safeTheme}`);
@@ -910,6 +1066,163 @@ async function submitSiteFeedback(event) {
   });
 }
 
+async function loadPolls() {
+  if (!POLLS_FRONTEND_ENABLED) return;
+  if (!state.client) return;
+
+  const { data, error } = await state.client.rpc("get_public_polls", {
+    owner_token_hash_value: state.ownerTokenHash
+  });
+
+  if (isMissingRpc(error)) {
+    renderPolls([], { missing: true });
+    return;
+  }
+
+  if (error) {
+    renderPolls([], { error: error.message });
+    return;
+  }
+
+  state.polls = data || [];
+  renderPolls(state.polls);
+}
+
+async function submitPoll(event) {
+  event.preventDefault();
+  if (!state.client) return setStatus("服务暂时不可用，请稍后再试。", true);
+
+  const question = normalizeQuestionText(pollQuestion.value);
+  const options = pollOptionInputs
+    .map((input) => normalizeText(input.value))
+    .filter(Boolean)
+    .slice(0, 4);
+  const validation = validateText(question, 4, 160);
+  if (!validation.ok) return setStatus(validation.message, true);
+  if (options.length < 2) return setStatus("投票至少需要 2 个选项。", true);
+
+  await withBusy(pollForm, async () => {
+    const { error } = await state.client.rpc("create_poll", {
+      question_body: question,
+      option_bodies: options,
+      owner_token_hash_value: state.ownerTokenHash,
+      keep_public_after_end_value: pollKeepPublic.checked
+    });
+
+    if (isMissingRpc(error)) throw new Error(t("poll.missing"));
+    if (error) throw error;
+    pollForm.reset();
+    pollKeepPublic.checked = true;
+    setStatus("投票已创建。");
+    await loadPolls();
+    await loadPublicMessages();
+  });
+}
+
+async function handlePollClick(event) {
+  const button = event.target.closest("button[data-poll-action]");
+  if (!button) return;
+
+  const pollId = button.closest("[data-poll-id]")?.dataset.pollId;
+  if (!pollId) return;
+
+  if (button.dataset.pollAction === "vote") {
+    await votePoll(pollId, button.dataset.optionId);
+  }
+
+  if (button.dataset.pollAction === "end") {
+    await endPoll(pollId);
+  }
+}
+
+async function votePoll(pollId, optionId) {
+  if (!optionId) return;
+  if (getLocalPollVotes()[pollId]) return setStatus(t("poll.alreadyVoted"), true);
+
+  await withBusy(refreshPollsButton, async () => {
+    const { error } = await state.client.rpc("vote_poll", {
+      poll_public_id_value: pollId,
+      option_public_id_value: optionId,
+      owner_token_hash_value: state.ownerTokenHash
+    });
+    if (isMissingRpc(error)) throw new Error(t("poll.missing"));
+    if (error) throw error;
+    const votes = getLocalPollVotes();
+    votes[pollId] = optionId;
+    localStorage.setItem(POLL_VOTES_KEY, JSON.stringify(votes));
+    setStatus("已投票。");
+    await loadPolls();
+  });
+}
+
+async function endPoll(pollId) {
+  await withBusy(refreshPollsButton, async () => {
+    const { error } = await state.client.rpc("end_poll", {
+      poll_public_id_value: pollId,
+      owner_token_hash_value: state.ownerTokenHash
+    });
+    if (isMissingRpc(error)) throw new Error(t("poll.missing"));
+    if (error) throw error;
+    setStatus("投票已结束。");
+    await loadPolls();
+    await loadPublicMessages();
+  });
+}
+
+function renderPolls(polls, options = {}) {
+  if (options.missing) {
+    const html = `<article class="empty-state">${t("poll.missing")}</article>`;
+    if (pollList) pollList.innerHTML = html;
+    if (boardPollList) boardPollList.innerHTML = "";
+    return;
+  }
+
+  if (options.error) {
+    const html = `<article class="empty-state">${escapeHtml(options.error)}</article>`;
+    if (pollList) pollList.innerHTML = html;
+    if (boardPollList) boardPollList.innerHTML = "";
+    return;
+  }
+
+  const activePolls = polls.filter((poll) => poll.is_active || poll.keep_public_after_end);
+  const html = activePolls.length
+    ? activePolls.map(renderPollCard).join("")
+    : `<article class="empty-state">${t("poll.empty")}</article>`;
+  if (pollList) pollList.innerHTML = html;
+  if (boardPollList) {
+    const boardPolls = activePolls.filter((poll) => poll.is_active).slice(0, 2);
+    boardPollList.innerHTML = boardPolls.map(renderPollCard).join("");
+  }
+}
+
+function renderPollCard(poll) {
+  const localVote = getLocalPollVotes()[poll.public_id];
+  const totalVotes = Number(poll.total_votes || 0);
+  const options = Array.isArray(poll.options) ? poll.options : [];
+  return `
+    <article class="content-card poll-card${poll.is_active ? "" : " is-ended"}" data-poll-id="${escapeHtml(poll.public_id)}">
+      <div class="message-topline">
+        <p class="message-meta">${poll.is_active ? t("poll.title") : t("poll.closed")} · ${formatDate(poll.created_at)} · ${formatText("poll.total", { count: totalVotes })}</p>
+        ${poll.owned_by_me && poll.is_active ? `<button class="secondary mini-button" data-poll-action="end" type="button">${t("poll.end")}</button>` : ""}
+      </div>
+      <p class="message-body">${escapeHtml(poll.question_text || "")}</p>
+      <div class="poll-options-list">
+        ${options.map((option) => {
+          const count = Number(option.vote_count || 0);
+          const percent = totalVotes ? Math.round((count / totalVotes) * 100) : 0;
+          const voted = localVote === option.public_id;
+          return `
+            <button class="poll-option${voted ? " is-voted" : ""}" data-poll-action="vote" data-option-id="${escapeHtml(option.public_id)}" type="button" aria-pressed="${voted ? "true" : "false"}" ${poll.is_active && !localVote ? "" : "disabled"}>
+              <span class="poll-option-label">${escapeHtml(option.option_text)}${voted ? ` · ${t("poll.voted")}` : ""}</span>
+              <span class="poll-option-count">${count} · ${percent}%</span>
+            </button>
+          `;
+        }).join("")}
+      </div>
+    </article>
+  `;
+}
+
 async function loadPublicMessages() {
   if (!state.client) return;
 
@@ -937,11 +1250,29 @@ function handlePublicSortChange(event) {
   renderCurrentPublicMessages();
 }
 
+function handleQuestionTypeFilterChange(event) {
+  state.questionTypeFilter = event.target.value;
+  renderCurrentPublicMessages();
+}
+
+function handleAnswerQuestionTypeFilterChange(event) {
+  state.answerQuestionTypeFilter = event.target.value;
+  state.currentQuestion = null;
+  answerForm.hidden = true;
+  skipQuestionButton.hidden = true;
+  resetAnswerFormForQuestion();
+  randomQuestionCard.innerHTML =
+    '<p class="muted">点击下面的按钮抽取一个问题。</p>';
+}
+
 function renderCurrentPublicMessages() {
   const visibleMessages = sortPublicMessages(
-    filterPublicMessages(
+    filterPublicMessagesByType(
+      filterPublicMessages(
       state.publicMessages.filter((message) => !isPublicMessageHidden(message.public_id)),
       state.publicFilterMode
+      ),
+      state.questionTypeFilter
     ),
     state.publicSortMode
   );
@@ -973,7 +1304,32 @@ function filterPublicMessages(messages, filterMode) {
     return messages.filter((message) => message.message_kind !== "bottle_qa");
   }
 
+  if (filterMode === "poll_posts") {
+    return messages.filter((message) => message.message_kind === "poll");
+  }
+
   return messages;
+}
+
+function filterPublicMessagesByType(messages, type) {
+  if (!type || type === "all") return messages;
+  return messages.filter((message) => classifyQuestionType(message.message_text || "") === type);
+}
+
+function questionMatchesSelectedType(text) {
+  return state.answerQuestionTypeFilter === "all" ||
+    classifyQuestionType(text || "") === state.answerQuestionTypeFilter;
+}
+
+function classifyQuestionType(text) {
+  const value = String(text || "").toLowerCase();
+  if (/(ai|chatgpt|openai|codex|模型|人工智能)/i.test(value)) return "ai";
+  if (/(学习|考试|高考|作业|学校|大学|课程|专业|study|exam|school)/i.test(value)) return "study";
+  if (/(关系|喜欢|朋友|恋|爱|联系|消息|回复|分手|家人|同学|relationship|friend|love)/i.test(value)) return "relationships";
+  if (/(以前|小时候|高中|毕业|过去|回忆|记得|想起|从前|memory|remember)/i.test(value)) return "memory";
+  if (/(难过|焦虑|开心|压力|情绪|累|孤独|害怕|心情|mood|feel|sad|happy)/i.test(value)) return "mood";
+  if (/(吃|睡|外卖|房间|出门|周末|生活|今天|最近|日常|life|daily)/i.test(value)) return "life";
+  return "other";
 }
 
 function sortPublicMessages(messages, sortMode) {
@@ -1041,6 +1397,7 @@ function renderPublicMessageCard(message) {
   const likeCount = Number(message.like_count || 0);
   const messageId = escapeHtml(message.public_id);
   const isSaved = isMessageSaved(message.public_id);
+  const questionType = classifyQuestionType(body);
 
   return `
     <article class="message-card${isSaved ? " is-saved" : ""}" id="post-${messageId}" data-message-id="${messageId}">
@@ -1048,6 +1405,8 @@ function renderPublicMessageCard(message) {
         <p class="message-meta">${formatDate(message.created_at)}${message.edited_at ? ` · 已编辑` : ""}</p>
         <span class="message-tags">
           ${message.message_kind === "bottle_qa" ? `<span class="message-kind">${t("kind.qa")}</span>` : ""}
+          ${message.message_kind === "poll" ? `<span class="message-kind">${t("poll.title")}</span>` : ""}
+          <span class="message-kind">${t(`questionType.${questionType}`)}</span>
           ${isSaved ? `<span class="message-kind">${t("kind.saved")}</span>` : ""}
         </span>
       </div>
@@ -1162,6 +1521,15 @@ function getSavedMessages() {
   try {
     const saved = JSON.parse(localStorage.getItem(SAVED_MESSAGES_KEY) || "{}");
     return saved && typeof saved === "object" && !Array.isArray(saved) ? saved : {};
+  } catch {
+    return {};
+  }
+}
+
+function getLocalPollVotes() {
+  try {
+    const votes = JSON.parse(localStorage.getItem(POLL_VOTES_KEY) || "{}");
+    return votes && typeof votes === "object" && !Array.isArray(votes) ? votes : {};
   } catch {
     return {};
   }
@@ -1499,20 +1867,40 @@ async function loadRandomQuestion() {
   await withBusy(loadQuestionButton, async () => {
     randomQuestionCard.innerHTML = '<p class="muted">内容漂流中...</p>';
     const recentIds = getRecentQuestionIds();
-    let { data, error } = await state.client.rpc("get_random_question", {
-      answer_limit: Number(config.maxAnswersPerQuestion || 5),
-      excluded_public_ids: recentIds
-    });
+    let data = null;
+    let error = null;
+    let attempts = state.answerQuestionTypeFilter === "all" ? 1 : 5;
 
-    if (isMissingRpc(error)) {
-      const fallback = await state.client.rpc("get_random_question", {
-        answer_limit: Number(config.maxAnswersPerQuestion || 5)
+    while (attempts > 0) {
+      const result = await state.client.rpc("get_random_question", {
+        answer_limit: Number(config.maxAnswersPerQuestion || 5),
+        excluded_public_ids: getRecentQuestionIds()
       });
-      data = fallback.data;
-      error = fallback.error;
+      data = result.data;
+      error = result.error;
+
+      if (isMissingRpc(error)) {
+        const fallback = await state.client.rpc("get_random_question", {
+          answer_limit: Number(config.maxAnswersPerQuestion || 5)
+        });
+        data = fallback.data;
+        error = fallback.error;
+      }
+
+      const candidate = data?.[0] || null;
+      if (!candidate || questionMatchesSelectedType(candidate.question_text)) break;
+      rememberQuestionId(candidate.public_id);
+      attempts -= 1;
     }
 
     if (error) throw error;
+    if (
+      state.answerQuestionTypeFilter !== "all" &&
+      data?.[0] &&
+      !questionMatchesSelectedType(data[0].question_text)
+    ) {
+      data = [];
+    }
     state.currentQuestion = data?.[0] || null;
 
     if (!state.currentQuestion && recentIds.length) {
@@ -1558,8 +1946,11 @@ function handleQuestionPoolFilterChange(event) {
 }
 
 function loadSeedQuestion() {
-  const seedQuestion =
-    SEED_QUESTIONS[Math.floor(Math.random() * SEED_QUESTIONS.length)];
+  const seedPool = SEED_QUESTIONS.filter((question) =>
+    questionMatchesSelectedType(question.text)
+  );
+  const pool = seedPool.length ? seedPool : SEED_QUESTIONS;
+  const seedQuestion = pool[Math.floor(Math.random() * pool.length)];
   const seenMeta = getSeenQuestionMeta(seedQuestion.id);
 
   state.currentQuestion = {
