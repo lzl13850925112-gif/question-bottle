@@ -4,6 +4,9 @@ const state = {
   currentQuestion: null,
   client: null,
   publicMessages: [],
+  publicFilterMode: "default",
+  publicSortMode: "newest_first",
+  questionPoolFilter: "all",
   visitorToken: "",
   ownerTokenHash: "",
   currentClaimTokenHash: ""
@@ -21,6 +24,128 @@ const blockedTerms = [
   "贷款"
 ];
 
+const SEED_QUESTIONS = [
+  {
+    id: "seed-question-001",
+    text: "你最近循环最多的一首歌是什么？",
+    is_seed: true,
+    source: "owner_seed",
+    may_be_ai_generated: true
+  },
+  {
+    id: "seed-question-002",
+    text: "今天有没有发生什么根本不值得发朋友圈、但你记住了的小事？",
+    is_seed: true,
+    source: "owner_seed",
+    may_be_ai_generated: true
+  },
+  {
+    id: "seed-question-003",
+    text: "你最近最常重复的一句话是什么？",
+    is_seed: true,
+    source: "owner_seed",
+    may_be_ai_generated: true
+  },
+  {
+    id: "seed-question-004",
+    text: "最近有没有什么东西在慢慢消耗你？",
+    is_seed: true,
+    source: "owner_seed",
+    may_be_ai_generated: true
+  },
+  {
+    id: "seed-question-005",
+    text: "你最近删掉过什么？",
+    is_seed: true,
+    source: "owner_seed",
+    may_be_ai_generated: true
+  },
+  {
+    id: "seed-question-006",
+    text: "最近一次熬夜，你在干什么？",
+    is_seed: true,
+    source: "owner_seed",
+    may_be_ai_generated: true
+  },
+  {
+    id: "seed-question-007",
+    text: "你现在最不想听到别人对你说什么？",
+    is_seed: true,
+    source: "owner_seed",
+    may_be_ai_generated: true
+  },
+  {
+    id: "seed-question-008",
+    text: "你有没有一个一直没舍得退出的AI聊天框？它对你有什么意义？",
+    is_seed: true,
+    source: "owner_seed",
+    may_be_ai_generated: true
+  },
+  {
+    id: "seed-question-009",
+    text: "最近有没有一句话，你已经想好很久，但一直没发出去？",
+    is_seed: true,
+    source: "owner_seed",
+    may_be_ai_generated: true
+  },
+  {
+    id: "seed-question-010",
+    text: "有没有一个人，你先要恢复联系，现在已经不知道该怎么重新开口？他过的怎么样？",
+    is_seed: true,
+    source: "owner_seed",
+    may_be_ai_generated: true
+  },
+  {
+    id: "seed-question-011",
+    text: "你最近一次突然不想解释了，是因为什么？",
+    is_seed: true,
+    source: "owner_seed",
+    may_be_ai_generated: true
+  },
+  {
+    id: "seed-question-012",
+    text: "最近有没有一个瞬间，让你突然觉得和一个人的关系变了？",
+    is_seed: true,
+    source: "owner_seed",
+    may_be_ai_generated: true
+  },
+  {
+    id: "seed-question-013",
+    text: "有没有谁其实对你很好，但你一直没认真回应过？",
+    is_seed: true,
+    source: "owner_seed",
+    may_be_ai_generated: true
+  },
+  {
+    id: "seed-question-014",
+    text: "有没有一天，你现在回头看，会觉得像分界线？",
+    is_seed: true,
+    source: "owner_seed",
+    may_be_ai_generated: true
+  },
+  {
+    id: "seed-question-015",
+    text: "你最近一次感觉“时间过得太快”是在什么时候？",
+    is_seed: true,
+    source: "owner_seed",
+    may_be_ai_generated: true
+  },
+  {
+    id: "seed-question-016",
+    text: "有没有什么东西，你以前天天接触，现在却突然消失了？",
+    is_seed: true,
+    source: "owner_seed",
+    may_be_ai_generated: true
+  },
+  {
+    id: "seed-question-017",
+    text: "有没有什么事情没人问过你，但你希望被询问？",
+    is_seed: true,
+    source: "owner_seed",
+    may_be_ai_generated: true
+  }
+];
+
 const statusEl = document.querySelector("#status");
 const views = [...document.querySelectorAll(".panel")];
 const viewButtons = [...document.querySelectorAll("[data-view]")];
@@ -28,6 +153,8 @@ const viewButtons = [...document.querySelectorAll("[data-view]")];
 const publicMessageForm = document.querySelector("#public-message-form");
 const publicMessageText = document.querySelector("#public-message-text");
 const publicMessageList = document.querySelector("#public-message-list");
+const publicMessageFilter = document.querySelector("#public-message-filter");
+const publicMessageSort = document.querySelector("#public-message-sort");
 const refreshMessagesButton = document.querySelector("#refresh-messages");
 
 const questionForm = document.querySelector("#question-form");
@@ -39,10 +166,14 @@ const copyClaimLink = document.querySelector("#copy-claim-link");
 
 const loadQuestionButton = document.querySelector("#load-question");
 const skipQuestionButton = document.querySelector("#skip-question");
+const questionPoolFilter = document.querySelector("#question-pool-filter");
 const randomQuestionCard = document.querySelector("#random-question-card");
 const answerForm = document.querySelector("#answer-form");
 const answerText = document.querySelector("#answer-text");
 const answerPublicConsent = document.querySelector("#answer-public-consent");
+const answerPublicConsentLine = answerPublicConsent?.closest(".check-line");
+const answerPublicConsentText = document.querySelector("#answer-public-consent-text");
+const seedQuestionNotice = document.querySelector("#seed-question-notice");
 
 const checkForm = document.querySelector("#check-form");
 const claimToken = document.querySelector("#claim-token");
@@ -149,6 +280,8 @@ function bindCounters() {
 
 function bindForms() {
   publicMessageForm.addEventListener("submit", submitPublicMessage);
+  publicMessageFilter?.addEventListener("change", handlePublicFilterChange);
+  publicMessageSort?.addEventListener("change", handlePublicSortChange);
   refreshMessagesButton.addEventListener("click", loadPublicMessages);
   publicMessageList.addEventListener("click", handlePublicMessageClick);
   publicMessageList.addEventListener("submit", submitPublicReply);
@@ -156,6 +289,7 @@ function bindForms() {
   replyList.addEventListener("submit", submitAskerReply);
   myContent.addEventListener("click", handleMyContentClick);
   questionForm.addEventListener("submit", submitQuestion);
+  questionPoolFilter?.addEventListener("change", handleQuestionPoolFilterChange);
   loadQuestionButton.addEventListener("click", loadRandomQuestion);
   skipQuestionButton.addEventListener("click", loadRandomQuestion);
   answerForm.addEventListener("submit", submitAnswer);
@@ -204,9 +338,76 @@ async function loadPublicMessages() {
 
     if (error) throw error;
     state.publicMessages = data || [];
-    renderPublicMessages(state.publicMessages);
-    if (!state.publicMessages.length) setStatus("暂无公开留言。");
+    renderCurrentPublicMessages();
+    setStatus(state.publicMessages.length ? "" : "暂无公开留言。");
   });
+}
+
+function handlePublicFilterChange(event) {
+  state.publicFilterMode = event.target.value;
+  renderCurrentPublicMessages();
+}
+
+function handlePublicSortChange(event) {
+  state.publicSortMode = event.target.value;
+  renderCurrentPublicMessages();
+}
+
+function renderCurrentPublicMessages() {
+  renderPublicMessages(
+    sortPublicMessages(
+      filterPublicMessages(state.publicMessages, state.publicFilterMode),
+      state.publicSortMode
+    )
+  );
+}
+
+function filterPublicMessages(messages, filterMode) {
+  if (filterMode === "related_to_me") {
+    return messages.filter((message) => message.owned_by_me || message.liked_by_me);
+  }
+
+  if (filterMode === "public_questions") {
+    return messages.filter((message) => message.message_kind === "bottle_qa");
+  }
+
+  if (filterMode === "message_posts") {
+    return messages.filter((message) => message.message_kind !== "bottle_qa");
+  }
+
+  return messages;
+}
+
+function sortPublicMessages(messages, sortMode) {
+  const sortedMessages = [...messages];
+  const createdAtTime = (message) => new Date(message.created_at || 0).getTime();
+  const likeCount = (message) => Number(message.like_count || 0);
+  const replyCount = (message) => Number(message.reply_count || 0);
+  const recommendedScore = (message) => {
+    const ageHours = Math.max(0, (Date.now() - createdAtTime(message)) / 36e5);
+    const recencyScore = 1 / (1 + ageHours / 24);
+    return likeCount(message) * 3 + replyCount(message) + recencyScore * 2;
+  };
+
+  if (sortMode === "oldest_first") {
+    return sortedMessages.sort((a, b) => createdAtTime(a) - createdAtTime(b));
+  }
+
+  if (sortMode === "most_liked") {
+    return sortedMessages.sort((a, b) => {
+      const likeDifference = likeCount(b) - likeCount(a);
+      return likeDifference || createdAtTime(b) - createdAtTime(a);
+    });
+  }
+
+  if (sortMode === "codex_recommended") {
+    return sortedMessages.sort((a, b) => {
+      const scoreDifference = recommendedScore(b) - recommendedScore(a);
+      return scoreDifference || createdAtTime(b) - createdAtTime(a);
+    });
+  }
+
+  return sortedMessages.sort((a, b) => createdAtTime(b) - createdAtTime(a));
 }
 
 function renderPublicMessages(messages) {
@@ -420,6 +621,11 @@ async function submitQuestion(event) {
 async function loadRandomQuestion() {
   if (!state.client) return setStatus("Supabase 尚未配置。", true);
 
+  if (state.questionPoolFilter === "seed_only") {
+    loadSeedQuestion();
+    return;
+  }
+
   await withBusy(loadQuestionButton, async () => {
     const recentIds = getRecentQuestionIds();
     let { data, error } = await state.client.rpc("get_random_question", {
@@ -458,10 +664,53 @@ async function loadRandomQuestion() {
     `;
     answerForm.hidden = false;
     skipQuestionButton.hidden = false;
-    answerText.value = "";
+    resetAnswerFormForQuestion();
     updateAllCounters();
     setStatus("已抽取一个问题。");
   });
+}
+
+function handleQuestionPoolFilterChange(event) {
+  state.questionPoolFilter = event.target.value;
+  state.currentQuestion = null;
+  answerForm.hidden = true;
+  skipQuestionButton.hidden = true;
+  resetAnswerFormForQuestion();
+  if (seedQuestionNotice) {
+    seedQuestionNotice.hidden = state.questionPoolFilter !== "seed_only";
+  }
+  randomQuestionCard.innerHTML =
+    '<p class="muted">点击下面的按钮抽取一个问题。</p>';
+  updateAllCounters();
+}
+
+function loadSeedQuestion() {
+  const seedQuestion =
+    SEED_QUESTIONS[Math.floor(Math.random() * SEED_QUESTIONS.length)];
+
+  state.currentQuestion = {
+    ...seedQuestion,
+    public_id: seedQuestion.id,
+    question_text: seedQuestion.text,
+    answer_count: 0
+  };
+  randomQuestionCard.innerHTML = `
+    <p class="reply-meta">种子问题</p>
+    <p>${escapeHtml(seedQuestion.text)}</p>
+  `;
+  answerForm.hidden = false;
+  skipQuestionButton.hidden = false;
+  answerText.value = "";
+  answerText.maxLength = getSeedAnswerMaxLength(seedQuestion.text);
+  answerPublicConsent.checked = false;
+  answerPublicConsentLine?.removeAttribute("hidden");
+  if (answerPublicConsentText) {
+    answerPublicConsentText.textContent =
+      "我知道这条回答会和种子问题一起公开显示在留言板。";
+  }
+  if (seedQuestionNotice) seedQuestionNotice.hidden = false;
+  updateAllCounters();
+  setStatus("已抽取一个种子问题。");
 }
 
 async function submitAnswer(event) {
@@ -472,6 +721,11 @@ async function submitAnswer(event) {
   const text = normalizeText(answerText.value);
   const validation = validateText(text, 2, 1000);
   if (!validation.ok) return setStatus(validation.message, true);
+
+  if (state.currentQuestion.is_seed) {
+    await submitSeedAnswer(text);
+    return;
+  }
 
   await withBusy(answerForm, async () => {
     let { error } = await state.client.rpc("submit_answer", {
@@ -495,11 +749,58 @@ async function submitAnswer(event) {
     state.currentQuestion = null;
     randomQuestionCard.innerHTML =
       '<p class="muted">回答已发送。你可以再抽一个问题。</p>';
-    answerText.value = "";
-    answerPublicConsent.checked = false;
+    resetAnswerFormForQuestion();
     updateAllCounters();
     setStatus("回答已保存。");
   });
+}
+
+async function submitSeedAnswer(text) {
+  if (!answerPublicConsent.checked) {
+    return setStatus("请先确认这条回答会公开显示在留言板。", true);
+  }
+
+  const messageText = formatSeedAnswerMessage(state.currentQuestion.question_text, text);
+  const validation = validateText(messageText, 2, 280);
+  if (!validation.ok) {
+    return setStatus("这条回答有点长，请缩短后再发布。", true);
+  }
+
+  await withBusy(answerForm, async () => {
+    const { error } = await state.client.rpc("submit_public_message", {
+      message_body: messageText,
+      owner_token_hash_value: state.ownerTokenHash
+    });
+
+    if (error) throw error;
+
+    answerForm.hidden = true;
+    state.currentQuestion = null;
+    randomQuestionCard.innerHTML =
+      '<p class="muted">回答已发布到留言板。你可以再抽一个问题。</p>';
+    resetAnswerFormForQuestion();
+    updateAllCounters();
+    setStatus("回答已发布到留言板。");
+    await loadPublicMessages();
+  });
+}
+
+function formatSeedAnswerMessage(questionText, answerBody) {
+  return `问：${questionText} 答：${answerBody}`;
+}
+
+function getSeedAnswerMaxLength(questionText) {
+  return Math.max(2, 280 - formatSeedAnswerMessage(questionText, "").length);
+}
+
+function resetAnswerFormForQuestion() {
+  answerText.value = "";
+  answerText.maxLength = 1000;
+  answerPublicConsent.checked = false;
+  if (answerPublicConsentText) {
+    answerPublicConsentText.textContent =
+      "如果提问者也同意，这组匿名问答可以公开显示。";
+  }
 }
 
 async function checkReplies(event) {
