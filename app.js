@@ -125,7 +125,7 @@ const SEED_QUESTIONS = [...new Set(SEED_QUESTION_TEXTS)].map((text, index) => ({
 }));
 
 const SITE_NOTE = {
-  version: "6.2",
+  version: "6.4",
   textKey: "update.text"
 };
 
@@ -135,7 +135,7 @@ const I18N = {
     "app.eyebrow": "匿名留言 · 问题漂流瓶",
     "app.intro": "可以匿名发一条短留言，也可以留下问题等别人回答。这里不需要账号，也不会显示名字。",
     "app.privacy": "这里不使用账号。其他人不会看到是谁写的内容。网站只用一个保存在你浏览器里的本地 token，帮你管理自己的内容。请不要提交敏感个人信息；托管和数据库服务仍可能有技术日志。",
-    "update.text": "强化白日主题玻璃层次，修正移动端彩虹渐变，并补充常见问题。",
+    "update.text": "修正主题叠画期间的交互、扩大设置关闭区，并优化分类与常见问题。",
     "theme.night": "夜间",
     "theme.day": "日间",
     "theme.grass": "青草",
@@ -174,6 +174,12 @@ const I18N = {
     "faq.localAnswer": "本地记录依赖当前浏览器保存的 token 和历史链接。换设备、清缓存或无痕浏览都可能丢失本地索引，所以重要内容请先自己保存。",
     "faq.pollQuestion": "投票功能什么时候开放？",
     "faq.pollAnswer": "前端已经预留完成，但需要先手动执行数据库迁移。迁移完成前，页面不会尝试加载投票数据。",
+    "faq.categoryQuestion": "内容分类为什么有时不准？",
+    "faq.categoryAnswer": "分类只是浏览辅助，不会影响内容本身。它会根据文字里的多个线索综合判断，但短句、隐喻或混合主题仍可能分错。",
+    "faq.deleteQuestion": "我能删除自己发过的内容吗？",
+    "faq.deleteAnswer": "如果当前浏览器还保存着对应的本地 token，通常可以在“我的”里管理自己留下的公开留言或问题。换设备或清缓存后可能无法确认归属。",
+    "faq.sensitiveQuestion": "这里适合写很私密的事吗？",
+    "faq.sensitiveAnswer": "不建议写身份证号、手机号、住址、密码或能直接识别你的细节。这里强调匿名体验，但仍是联网服务。",
     "siteInfo.title": "网站信息",
     "siteInfo.project": "这是 Figaro 运用 OpenAI 工具完成制作的匿名留言空间，所有编程工作都由 AI 完成。",
     "siteInfo.author": "作者",
@@ -360,7 +366,7 @@ const I18N = {
     "app.eyebrow": "Anonymous notes · question bottle",
     "app.intro": "Leave a short anonymous note, or send a question for someone to answer. No account. No names.",
     "app.privacy": "No account is used here. Other visitors will not see who wrote something. A local browser token helps keep your own content together. Please do not submit sensitive personal information; hosting and database services may still keep technical logs.",
-    "update.text": "Strengthens the Day glass layer, fixes mobile Rainbow gradients, and expands the FAQ.",
+    "update.text": "Fixes interaction during theme crossfades, enlarges the settings close target, and improves categories and FAQ.",
     "theme.night": "Night",
     "theme.day": "Day",
     "theme.grass": "Grass",
@@ -399,6 +405,12 @@ const I18N = {
     "faq.localAnswer": "Local records depend on this browser's saved token and history links. Changing devices, clearing storage, or using private browsing can lose the local index, so keep important content yourself.",
     "faq.pollQuestion": "When will polls open?",
     "faq.pollAnswer": "The frontend is ready, but the database migration still needs to be applied manually. Until then, the page will not try to load poll data.",
+    "faq.categoryQuestion": "Why can categories be wrong sometimes?",
+    "faq.categoryAnswer": "Categories are only a browsing aid. They combine several text signals, but short notes, metaphors, or mixed topics can still be misread.",
+    "faq.deleteQuestion": "Can I delete what I posted?",
+    "faq.deleteAnswer": "If this browser still has the matching local token, you can usually manage your own public notes or questions in Mine. After changing devices or clearing storage, ownership may be impossible to prove.",
+    "faq.sensitiveQuestion": "Should I write very private details here?",
+    "faq.sensitiveAnswer": "Avoid ID numbers, phone numbers, addresses, passwords, or details that directly identify you. The site is designed for anonymity, but it is still an online service.",
     "siteInfo.title": "Site Info",
     "siteInfo.project": "This anonymous space was made by Figaro using OpenAI tools, with all programming work completed by AI.",
     "siteInfo.author": "Author",
@@ -967,6 +979,28 @@ function closeSheets() {
   });
 }
 
+function createThemeCrossfadeClone() {
+  const transitionTargets = [...document.querySelectorAll(".app-shell, .bottom-dock")];
+  if (!transitionTargets.length) return null;
+
+  document.querySelector(".theme-crossfade-clone")?.remove();
+  const overlay = document.createElement("div");
+  overlay.className = "theme-crossfade-clone";
+  overlay.setAttribute("aria-hidden", "true");
+  overlay.style.background = getComputedStyle(document.body).background;
+
+  transitionTargets.forEach((target) => {
+    const clone = target.cloneNode(true);
+    clone.querySelectorAll("script").forEach((node) => node.remove());
+    clone.querySelectorAll("[id]").forEach((node) => node.removeAttribute("id"));
+    overlay.append(clone);
+  });
+  document.body.append(overlay);
+  window.requestAnimationFrame(() => overlay.classList.add("is-fading"));
+  window.setTimeout(() => overlay.remove(), 5600);
+  return overlay;
+}
+
 function renderRhythmState() {
   if (!rhythmNote) return;
 
@@ -995,22 +1029,28 @@ function setTheme(theme, shouldPersist = true) {
     ? theme
     : "night";
   const isChanging = document.documentElement.dataset.theme && document.documentElement.dataset.theme !== safeTheme;
+
+  const applyTheme = () => {
+    document.documentElement.dataset.theme = safeTheme;
+    themeButtons.forEach((button) => {
+      button.classList.toggle("is-active", button.dataset.themeChoice === safeTheme);
+    });
+    updateThemeLabel(safeTheme);
+    closeThemeMenu();
+    if (shouldPersist) localStorage.setItem(THEME_KEY, safeTheme);
+  };
+
   if (isChanging) {
+    createThemeCrossfadeClone();
     document.documentElement.classList.remove("theme-transitioning");
     window.requestAnimationFrame(() => {
       document.documentElement.classList.add("theme-transitioning");
       window.setTimeout(() => {
         document.documentElement.classList.remove("theme-transitioning");
-      }, 1120);
+      }, 5600);
     });
   }
-  document.documentElement.dataset.theme = safeTheme;
-  themeButtons.forEach((button) => {
-    button.classList.toggle("is-active", button.dataset.themeChoice === safeTheme);
-  });
-  updateThemeLabel(safeTheme);
-  closeThemeMenu();
-  if (shouldPersist) localStorage.setItem(THEME_KEY, safeTheme);
+  applyTheme();
 }
 
 function updateThemeLabel(theme) {
@@ -1334,14 +1374,56 @@ function questionMatchesSelectedType(text) {
 }
 
 function classifyQuestionType(text) {
-  const value = String(text || "").toLowerCase();
-  if (/(ai|chatgpt|openai|codex|模型|人工智能)/i.test(value)) return "ai";
-  if (/(学习|考试|高考|作业|学校|大学|课程|专业|study|exam|school)/i.test(value)) return "study";
-  if (/(关系|喜欢|朋友|恋|爱|联系|消息|回复|分手|家人|同学|relationship|friend|love)/i.test(value)) return "relationships";
-  if (/(以前|小时候|高中|毕业|过去|回忆|记得|想起|从前|memory|remember)/i.test(value)) return "memory";
-  if (/(难过|焦虑|开心|压力|情绪|累|孤独|害怕|心情|mood|feel|sad|happy)/i.test(value)) return "mood";
-  if (/(吃|睡|外卖|房间|出门|周末|生活|今天|最近|日常|life|daily)/i.test(value)) return "life";
-  return "other";
+  const value = normalizeClassifiableText(text);
+  if (!value) return "other";
+
+  const scores = {
+    ai: 0,
+    study: 0,
+    relationships: 0,
+    memory: 0,
+    mood: 0,
+    life: 0
+  };
+
+  const addScore = (type, weight, patterns) => {
+    patterns.forEach((pattern) => {
+      const matches = value.match(pattern);
+      if (matches) scores[type] += weight * matches.length;
+    });
+  };
+
+  addScore("ai", 5, [/\b(ai|chatgpt|openai|codex|gpt|llm|prompt)\b/g, /人工智能|大模型|模型|机器人|提示词/g]);
+  addScore("study", 4, [/\b(study|exam|school|college|class|homework|major|course|learn)\b/g, /学习|考试|高考|考研|作业|学校|大学|课程|专业|论文|成绩|上课|老师|导师|毕业/g]);
+  addScore("relationships", 4, [/\b(friend|relationship|love|partner|family|crush|breakup|dating)\b/g, /关系|朋友|恋爱|喜欢|暗恋|分手|家人|父母|同学|同事|联系|消息|回复|对象|伴侣/g]);
+  addScore("memory", 4, [/\b(memory|remember|childhood|past|before|used to|miss)\b/g, /以前|小时候|高中|初中|童年|毕业|过去|回忆|记得|想起|从前|怀念|那时候/g]);
+  addScore("mood", 4, [/\b(mood|feel|feeling|sad|happy|anxious|lonely|tired|stress|afraid|fear)\b/g, /难过|焦虑|开心|压力|情绪|累|孤独|害怕|心情|失眠|崩溃|委屈|迷茫|烦|抑郁/g]);
+  addScore("life", 3, [/\b(life|daily|today|weekend|sleep|food|work|home|room|walk)\b/g, /吃|睡|外卖|房间|出门|周末|生活|今天|最近|日常|上班|下班|通勤|天气|搬家|旅行|晚饭/g]);
+
+  if (/怎么办|该不该|要不要|选择|纠结|建议|help|advice/.test(value)) {
+    scores.mood += 1;
+    scores.life += 1;
+  }
+
+  if (/为什么|怎么|如何|教程|工具|代码|网站|程序/.test(value)) {
+    scores.study += 1;
+    scores.ai += /\b(ai|gpt|code|prompt)\b|模型|人工智能|代码|程序/.test(value) ? 2 : 0;
+  }
+
+  const ranked = Object.entries(scores).sort((a, b) => b[1] - a[1]);
+  const [bestType, bestScore] = ranked[0];
+  const secondScore = ranked[1]?.[1] || 0;
+  if (bestScore < 3) return "other";
+  if (bestScore - secondScore < 2 && value.length < 28) return "other";
+  return bestType;
+}
+
+function normalizeClassifiableText(text) {
+  return String(text || "")
+    .toLowerCase()
+    .replace(/[，。！？、；：“”‘’（）【】《》,.!?;:"'()[\]{}<>]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
 }
 
 function sortPublicMessages(messages, sortMode) {
