@@ -1,5 +1,6 @@
 -- question-bottle 6.0 polls migration
 -- Conservative migration only. Review, then run manually in Supabase SQL Editor.
+-- Run the whole file at once. If the editor has a partial selection, clear it first.
 -- Do not run this automatically against production.
 
 CREATE EXTENSION IF NOT EXISTS pgcrypto;
@@ -97,11 +98,11 @@ RETURNS TABLE (
 LANGUAGE plpgsql
 SECURITY DEFINER
 SET search_path = public
-AS $get_public_polls$
+AS '
 BEGIN
   IF owner_token_hash_value IS NOT NULL
      AND NOT public.is_sha256_hex(owner_token_hash_value) THEN
-    RAISE EXCEPTION 'visitor token hash 格式不正确';
+    RAISE EXCEPTION ''visitor token hash 格式不正确'';
   END IF;
 
   RETURN QUERY
@@ -111,13 +112,13 @@ BEGIN
     coalesce(
       jsonb_agg(
         jsonb_build_object(
-          'public_id', o.public_id,
-          'option_text', o.option_text,
-          'vote_count', coalesce(v.vote_count, 0)
+          ''public_id'', o.public_id,
+          ''option_text'', o.option_text,
+          ''vote_count'', coalesce(v.vote_count, 0)
         )
         ORDER BY o.option_order, o.created_at
       ) FILTER (WHERE o.id IS NOT NULL),
-      '[]'::jsonb
+      ''[]''::jsonb
     ) AS options,
     coalesce(sum(v.vote_count), 0)::bigint AS total_votes,
     coalesce(p.owner_token_hash = owner_token_hash_value, false) AS owned_by_me,
@@ -140,7 +141,7 @@ BEGIN
   ORDER BY p.is_active DESC, p.created_at DESC
   LIMIT 30;
 END;
-$get_public_polls$;
+';
 
 CREATE OR REPLACE FUNCTION public.create_poll(
   question_body text,
@@ -155,30 +156,30 @@ RETURNS TABLE (
 LANGUAGE plpgsql
 SECURITY DEFINER
 SET search_path = public
-AS $create_poll$
+AS '
 DECLARE
   new_poll_id uuid;
   option_body text;
   option_index integer := 0;
   option_count integer := coalesce(array_length(option_bodies, 1), 0);
 BEGIN
-  IF length(trim(coalesce(question_body, ''))) < 4
-     OR length(trim(coalesce(question_body, ''))) > 160 THEN
-    RAISE EXCEPTION '投票问题长度需要在 4 到 160 个字符之间';
+  IF length(trim(coalesce(question_body, ''''))) < 4
+     OR length(trim(coalesce(question_body, ''''))) > 160 THEN
+    RAISE EXCEPTION ''投票问题长度需要在 4 到 160 个字符之间'';
   END IF;
 
   IF option_count < 2
      OR option_count > 4 THEN
-    RAISE EXCEPTION '投票需要 2 到 4 个选项';
+    RAISE EXCEPTION ''投票需要 2 到 4 个选项'';
   END IF;
 
   IF owner_token_hash_value IS NOT NULL
      AND NOT public.is_sha256_hex(owner_token_hash_value) THEN
-    RAISE EXCEPTION 'visitor token hash 格式不正确';
+    RAISE EXCEPTION ''visitor token hash 格式不正确'';
   END IF;
 
   IF public.is_blocked_text(question_body) THEN
-    RAISE EXCEPTION '内容像广告或骚扰信息';
+    RAISE EXCEPTION ''内容像广告或骚扰信息'';
   END IF;
 
   INSERT INTO public.polls (
@@ -194,13 +195,13 @@ BEGIN
   RETURNING id INTO new_poll_id;
 
   FOREACH option_body IN ARRAY option_bodies LOOP
-    IF length(trim(coalesce(option_body, ''))) < 1
-       OR length(trim(coalesce(option_body, ''))) > 80 THEN
-      RAISE EXCEPTION '投票选项长度需要在 1 到 80 个字符之间';
+    IF length(trim(coalesce(option_body, ''''))) < 1
+       OR length(trim(coalesce(option_body, ''''))) > 80 THEN
+      RAISE EXCEPTION ''投票选项长度需要在 1 到 80 个字符之间'';
     END IF;
 
     IF public.is_blocked_text(option_body) THEN
-      RAISE EXCEPTION '内容像广告或骚扰信息';
+      RAISE EXCEPTION ''内容像广告或骚扰信息'';
     END IF;
 
     option_index := option_index + 1;
@@ -221,7 +222,7 @@ BEGIN
   FROM public.polls AS p
   WHERE p.id = new_poll_id;
 END;
-$create_poll$;
+';
 
 CREATE OR REPLACE FUNCTION public.vote_poll(
   poll_public_id_value text,
@@ -232,14 +233,14 @@ RETURNS void
 LANGUAGE plpgsql
 SECURITY DEFINER
 SET search_path = public
-AS $vote_poll$
+AS '
 DECLARE
   target_poll_id uuid;
   target_option_id uuid;
 BEGIN
   IF owner_token_hash_value IS NULL
      OR NOT public.is_sha256_hex(owner_token_hash_value) THEN
-    RAISE EXCEPTION 'visitor token hash 格式不正确';
+    RAISE EXCEPTION ''visitor token hash 格式不正确'';
   END IF;
 
   SELECT p.id
@@ -249,7 +250,7 @@ BEGIN
     AND p.is_active = true;
 
   IF target_poll_id IS NULL THEN
-    RAISE EXCEPTION '没有找到正在进行的投票';
+    RAISE EXCEPTION ''没有找到正在进行的投票'';
   END IF;
 
   SELECT o.id
@@ -259,7 +260,7 @@ BEGIN
     AND o.poll_id = target_poll_id;
 
   IF target_option_id IS NULL THEN
-    RAISE EXCEPTION '没有找到这个选项';
+    RAISE EXCEPTION ''没有找到这个选项'';
   END IF;
 
   INSERT INTO public.poll_votes (
@@ -276,7 +277,7 @@ BEGIN
   WHERE owner_token_hash IS NOT NULL
   DO NOTHING;
 END;
-$vote_poll$;
+';
 
 CREATE OR REPLACE FUNCTION public.end_poll(
   poll_public_id_value text,
@@ -286,11 +287,11 @@ RETURNS void
 LANGUAGE plpgsql
 SECURITY DEFINER
 SET search_path = public
-AS $end_poll$
+AS '
 BEGIN
   IF owner_token_hash_value IS NULL
      OR NOT public.is_sha256_hex(owner_token_hash_value) THEN
-    RAISE EXCEPTION 'visitor token hash 格式不正确';
+    RAISE EXCEPTION ''visitor token hash 格式不正确'';
   END IF;
 
   UPDATE public.polls AS p
@@ -300,10 +301,10 @@ BEGIN
     AND p.owner_token_hash = owner_token_hash_value;
 
   IF NOT FOUND THEN
-    RAISE EXCEPTION '没有权限结束这个投票';
+    RAISE EXCEPTION ''没有权限结束这个投票'';
   END IF;
 END;
-$end_poll$;
+';
 
 GRANT EXECUTE ON FUNCTION public.get_public_polls(text) TO anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.create_poll(text, text[], text, boolean) TO anon, authenticated;
