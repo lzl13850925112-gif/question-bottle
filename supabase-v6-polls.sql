@@ -97,7 +97,7 @@ RETURNS TABLE (
 LANGUAGE plpgsql
 SECURITY DEFINER
 SET search_path = public
-AS $$
+AS $get_public_polls$
 BEGIN
   IF owner_token_hash_value IS NOT NULL
      AND NOT public.is_sha256_hex(owner_token_hash_value) THEN
@@ -140,7 +140,7 @@ BEGIN
   ORDER BY p.is_active DESC, p.created_at DESC
   LIMIT 30;
 END;
-$$;
+$get_public_polls$;
 
 CREATE OR REPLACE FUNCTION public.create_poll(
   question_body text,
@@ -155,7 +155,7 @@ RETURNS TABLE (
 LANGUAGE plpgsql
 SECURITY DEFINER
 SET search_path = public
-AS $$
+AS $create_poll$
 DECLARE
   new_poll_id uuid;
   option_body text;
@@ -221,7 +221,7 @@ BEGIN
   FROM public.polls AS p
   WHERE p.id = new_poll_id;
 END;
-$$;
+$create_poll$;
 
 CREATE OR REPLACE FUNCTION public.vote_poll(
   poll_public_id_value text,
@@ -232,7 +232,7 @@ RETURNS void
 LANGUAGE plpgsql
 SECURITY DEFINER
 SET search_path = public
-AS $$
+AS $vote_poll$
 DECLARE
   target_poll_id uuid;
   target_option_id uuid;
@@ -276,7 +276,7 @@ BEGIN
   WHERE owner_token_hash IS NOT NULL
   DO NOTHING;
 END;
-$$;
+$vote_poll$;
 
 CREATE OR REPLACE FUNCTION public.end_poll(
   poll_public_id_value text,
@@ -286,7 +286,7 @@ RETURNS void
 LANGUAGE plpgsql
 SECURITY DEFINER
 SET search_path = public
-AS $$
+AS $end_poll$
 BEGIN
   IF owner_token_hash_value IS NULL
      OR NOT public.is_sha256_hex(owner_token_hash_value) THEN
@@ -303,7 +303,7 @@ BEGIN
     RAISE EXCEPTION '没有权限结束这个投票';
   END IF;
 END;
-$$;
+$end_poll$;
 
 GRANT EXECUTE ON FUNCTION public.get_public_polls(text) TO anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.create_poll(text, text[], text, boolean) TO anon, authenticated;

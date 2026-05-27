@@ -19,6 +19,9 @@
   --glass-tint: rgba(168, 186, 205, 0.1);
   --glass-highlight: rgba(255, 255, 255, 0.2);
   --glass-edge: rgba(255, 255, 255, 0.14);
+  --theme-wash-1: rgba(115, 147, 185, 0.14);
+  --theme-wash-2: rgba(255, 255, 255, 0.05);
+  --theme-wash-3: rgba(115, 147, 185, 0.08);
   --danger: #e4a098;
   --shadow: 0 24px 80px rgba(0, 0, 0, 0.28);
   --shadow-soft: 0 12px 38px rgba(0, 0, 0, 0.18);
@@ -55,6 +58,12 @@
   --glass-tint: rgba(188, 204, 224, 0.16);
   --glass-highlight: rgba(255, 255, 255, 0.48);
   --glass-edge: rgba(255, 255, 255, 0.36);
+  --theme-wash-1: rgba(172, 204, 238, 0.44);
+  --theme-wash-2: rgba(255, 255, 255, 0.68);
+  --theme-wash-3: rgba(160, 176, 206, 0.28);
+  --day-prism-1: rgba(196, 222, 255, 0.46);
+  --day-prism-2: rgba(255, 255, 255, 0.74);
+  --day-prism-3: rgba(224, 232, 246, 0.52);
   --danger: #a85d58;
   --shadow: 0 24px 72px rgba(68, 79, 92, 0.14);
   --shadow-soft: 0 12px 30px rgba(68, 79, 92, 0.09);
@@ -81,6 +90,9 @@
   --glass-tint: rgba(109, 150, 117, 0.14);
   --glass-highlight: rgba(255, 255, 242, 0.42);
   --glass-edge: rgba(230, 248, 225, 0.36);
+  --theme-wash-1: rgba(132, 174, 126, 0.3);
+  --theme-wash-2: rgba(255, 252, 224, 0.3);
+  --theme-wash-3: rgba(82, 128, 92, 0.16);
   --danger: #b26358;
   --shadow: 0 24px 72px rgba(54, 75, 56, 0.18);
   --shadow-soft: 0 12px 30px rgba(54, 75, 56, 0.12);
@@ -107,6 +119,9 @@
   --glass-tint: rgba(224, 146, 104, 0.15);
   --glass-highlight: rgba(255, 245, 232, 0.45);
   --glass-edge: rgba(255, 222, 198, 0.36);
+  --theme-wash-1: rgba(232, 162, 116, 0.28);
+  --theme-wash-2: rgba(255, 238, 210, 0.34);
+  --theme-wash-3: rgba(177, 106, 78, 0.16);
   --danger: #a64f49;
   --shadow: 0 24px 72px rgba(92, 55, 39, 0.17);
   --shadow-soft: 0 12px 30px rgba(92, 55, 39, 0.11);
@@ -133,6 +148,9 @@
   --glass-tint: rgba(95, 151, 169, 0.15);
   --glass-highlight: rgba(238, 253, 255, 0.48);
   --glass-edge: rgba(202, 235, 244, 0.38);
+  --theme-wash-1: rgba(119, 186, 208, 0.3);
+  --theme-wash-2: rgba(236, 255, 255, 0.36);
+  --theme-wash-3: rgba(72, 128, 150, 0.16);
   --danger: #a95d5b;
   --shadow: 0 24px 72px rgba(42, 78, 92, 0.16);
   --shadow-soft: 0 12px 30px rgba(42, 78, 92, 0.11);
@@ -159,6 +177,9 @@
   --glass-tint: rgba(143, 117, 84, 0.14);
   --glass-highlight: rgba(255, 246, 232, 0.44);
   --glass-edge: rgba(236, 218, 191, 0.36);
+  --theme-wash-1: rgba(169, 139, 96, 0.28);
+  --theme-wash-2: rgba(255, 242, 216, 0.34);
+  --theme-wash-3: rgba(116, 91, 56, 0.16);
   --danger: #a15f54;
   --shadow: 0 24px 72px rgba(78, 58, 37, 0.16);
   --shadow-soft: 0 12px 30px rgba(78, 58, 37, 0.1);
@@ -1559,6 +1580,47 @@ body {
     linear-gradient(180deg, color-mix(in srgb, var(--bg-2) 86%, var(--accent-glow)), var(--bg) 34rem);
 }
 
+:root:not([data-theme="night"]):not([data-theme="rainbow"]) body {
+  background:
+    radial-gradient(circle at 12% 3%, var(--theme-wash-1), transparent 30rem),
+    radial-gradient(circle at 88% 10%, var(--theme-wash-2), transparent 28rem),
+    radial-gradient(circle at 62% 96%, var(--theme-wash-3), transparent 34rem),
+    linear-gradient(165deg, color-mix(in srgb, var(--bg-2) 88%, white), var(--bg) 54%);
+}
+
+:root:not([data-theme="night"]):not([data-theme="rainbow"]) body::before {
+  opacity: 0.46;
+  background:
+    linear-gradient(125deg, color-mix(in srgb, var(--glass-highlight) 72%, transparent), transparent 38%),
+    radial-gradient(circle at 68% 0%, color-mix(in srgb, var(--theme-wash-1) 78%, transparent), transparent 26rem),
+    radial-gradient(circle at 22% 80%, color-mix(in srgb, var(--theme-wash-3) 72%, transparent), transparent 32rem);
+}
+
+:root[data-theme="day"] body {
+  background:
+    radial-gradient(circle at 8% -2%, var(--day-prism-1), transparent 24rem),
+    radial-gradient(circle at 86% 8%, var(--day-prism-2), transparent 28rem),
+    radial-gradient(circle at 52% 94%, var(--day-prism-3), transparent 36rem),
+    linear-gradient(145deg, #ffffff 0%, #edf3fb 46%, #f9fbff 100%);
+}
+
+:root[data-theme="day"] body::before {
+  opacity: 0.78;
+  filter: blur(10px);
+  background:
+    linear-gradient(118deg, rgba(255, 255, 255, 0.76), transparent 32%),
+    radial-gradient(circle at 24% 0%, rgba(190, 218, 250, 0.48), transparent 22rem),
+    radial-gradient(circle at 86% 16%, rgba(255, 255, 255, 0.74), transparent 20rem),
+    radial-gradient(circle at 34% 86%, rgba(196, 204, 226, 0.28), transparent 30rem);
+}
+
+:root[data-theme="day"] body::after {
+  opacity: 0.34;
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.72), transparent 34%),
+    radial-gradient(circle at 72% 0%, rgba(196, 222, 255, 0.3), transparent 24rem);
+}
+
 :root[data-theme="rainbow"] body {
   background:
     linear-gradient(
@@ -1651,6 +1713,69 @@ body {
     inset 0 1px 0 color-mix(in srgb, white 30%, transparent),
     inset 0 -1px 0 color-mix(in srgb, var(--line) 90%, transparent),
     0 22px 64px color-mix(in srgb, var(--accent-glow) 92%, transparent);
+}
+
+:root:not([data-theme="night"]):not([data-theme="rainbow"]) .v5-shell .side-rail,
+:root:not([data-theme="night"]):not([data-theme="rainbow"]) .v5-shell .stage-top,
+:root:not([data-theme="night"]):not([data-theme="rainbow"]) .v5-shell .panel,
+:root:not([data-theme="night"]):not([data-theme="rainbow"]) .bottom-dock,
+:root:not([data-theme="night"]):not([data-theme="rainbow"]) .floating-sheet {
+  background:
+    linear-gradient(140deg, color-mix(in srgb, var(--glass-highlight) 64%, transparent), transparent 42%),
+    radial-gradient(circle at 18% 0%, color-mix(in srgb, var(--theme-wash-2) 72%, transparent), transparent 26rem),
+    linear-gradient(180deg, color-mix(in srgb, var(--glass-tint) 90%, transparent), transparent 76%),
+    color-mix(in srgb, var(--glass) 72%, transparent);
+  box-shadow:
+    inset 0 1px 0 color-mix(in srgb, white 36%, transparent),
+    inset 0 -1px 0 color-mix(in srgb, var(--glass-edge) 76%, transparent),
+    0 24px 78px color-mix(in srgb, var(--accent-glow) 88%, transparent);
+}
+
+:root:not([data-theme="night"]):not([data-theme="rainbow"]) .v5-shell .side-rail::before,
+:root:not([data-theme="night"]):not([data-theme="rainbow"]) .v5-shell .stage-top::before,
+:root:not([data-theme="night"]):not([data-theme="rainbow"]) .v5-shell .panel::before,
+:root:not([data-theme="night"]):not([data-theme="rainbow"]) .bottom-dock::before,
+:root:not([data-theme="night"]):not([data-theme="rainbow"]) .floating-sheet::before {
+  opacity: 0.86;
+  background:
+    linear-gradient(132deg, color-mix(in srgb, white 34%, transparent), transparent 34%),
+    radial-gradient(circle at 12% 2%, color-mix(in srgb, var(--theme-wash-2) 88%, transparent), transparent 18rem),
+    linear-gradient(180deg, transparent 42%, color-mix(in srgb, var(--glass-edge) 54%, transparent));
+}
+
+:root[data-theme="day"] .v5-shell .side-rail,
+:root[data-theme="day"] .v5-shell .stage-top,
+:root[data-theme="day"] .v5-shell .panel,
+:root[data-theme="day"] .bottom-dock,
+:root[data-theme="day"] .floating-sheet,
+:root[data-theme="day"] .settings-section,
+:root[data-theme="day"] .sub-panel {
+  border-color: rgba(102, 126, 160, 0.18);
+  background:
+    linear-gradient(145deg, rgba(255, 255, 255, 0.82), rgba(255, 255, 255, 0.18) 42%, transparent 72%),
+    radial-gradient(circle at 16% 0%, rgba(204, 228, 255, 0.72), transparent 18rem),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.48), rgba(222, 232, 246, 0.22) 62%, rgba(255, 255, 255, 0.18)),
+    rgba(255, 255, 255, 0.36);
+  backdrop-filter: blur(72px) saturate(238%) contrast(108%);
+  -webkit-backdrop-filter: blur(72px) saturate(238%) contrast(108%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.72),
+    inset 0 -1px 0 rgba(154, 174, 203, 0.28),
+    inset 18px 18px 60px rgba(255, 255, 255, 0.18),
+    0 34px 96px rgba(92, 112, 142, 0.22);
+}
+
+:root[data-theme="day"] .v5-shell .side-rail::before,
+:root[data-theme="day"] .v5-shell .stage-top::before,
+:root[data-theme="day"] .v5-shell .panel::before,
+:root[data-theme="day"] .bottom-dock::before,
+:root[data-theme="day"] .floating-sheet::before {
+  opacity: 0.96;
+  background:
+    linear-gradient(128deg, rgba(255, 255, 255, 0.88), transparent 30%),
+    radial-gradient(circle at 14% 0%, rgba(255, 255, 255, 0.82), transparent 14rem),
+    radial-gradient(circle at 92% 12%, rgba(190, 218, 255, 0.42), transparent 20rem),
+    linear-gradient(180deg, transparent 42%, rgba(188, 204, 224, 0.28));
 }
 
 .v5-shell .hero {
@@ -1882,15 +2007,15 @@ body {
 
 .dock-button.is-active {
   z-index: 2;
-  border-color: color-mix(in srgb, var(--accent) 48%, var(--line));
+  border-color: color-mix(in srgb, var(--accent) 34%, var(--line));
   background:
-    linear-gradient(180deg, color-mix(in srgb, var(--glass-highlight) 58%, transparent), transparent 72%),
-    color-mix(in srgb, var(--accent-soft) 94%, transparent);
+    linear-gradient(180deg, color-mix(in srgb, var(--glass-highlight) 40%, transparent), transparent 78%),
+    color-mix(in srgb, var(--accent-soft) 56%, transparent);
   color: var(--ink);
-  transform: translateY(-9px) scale(1.16);
+  transform: translateY(-5px) scale(1.08);
   box-shadow:
-    inset 0 1px 0 color-mix(in srgb, white 20%, transparent),
-    0 16px 38px color-mix(in srgb, var(--accent-glow) 96%, transparent);
+    inset 0 1px 0 color-mix(in srgb, white 14%, transparent),
+    0 10px 28px color-mix(in srgb, var(--accent-glow) 58%, transparent);
 }
 
 .dock-button.is-active::after {
@@ -1903,7 +2028,8 @@ body {
   border-radius: 999px;
   background: color-mix(in srgb, var(--accent) 62%, white);
   transform: translateX(-50%);
-  box-shadow: 0 0 16px color-mix(in srgb, var(--accent-glow) 90%, transparent);
+  opacity: 0.72;
+  box-shadow: 0 0 12px color-mix(in srgb, var(--accent-glow) 62%, transparent);
 }
 
 .sheet-backdrop {
@@ -2094,13 +2220,16 @@ body {
     height: calc(100vh - 36px);
     max-height: calc(100vh - 36px);
     overflow-x: hidden;
-    overflow-y: auto;
+    overflow-y: scroll;
     overscroll-behavior: contain;
     scrollbar-gutter: stable;
+    -webkit-overflow-scrolling: touch;
   }
 
   .v5-shell .workspace {
+    align-self: stretch;
     display: block;
+    padding-right: 4px;
   }
 
   .v5-shell .workspace > .panel {
@@ -2135,6 +2264,46 @@ body {
     overflow: visible;
   }
 
+  :root:not([data-theme="night"]):not([data-theme="rainbow"]) body {
+    background:
+      radial-gradient(circle at 8% 0%, var(--theme-wash-1), transparent 19rem),
+      radial-gradient(circle at 96% 18%, var(--theme-wash-2), transparent 18rem),
+      radial-gradient(circle at 52% 100%, var(--theme-wash-3), transparent 22rem),
+      linear-gradient(170deg, color-mix(in srgb, var(--bg-2) 90%, white), var(--bg) 58%);
+  }
+
+  :root[data-theme="rainbow"] body {
+    background:
+      repeating-linear-gradient(
+        118deg,
+        color-mix(in srgb, #ff4d4d 44%, transparent) 0 30px,
+        color-mix(in srgb, #ff9a2f 42%, transparent) 30px 60px,
+        color-mix(in srgb, #ffe45c 36%, transparent) 60px 90px,
+        color-mix(in srgb, #4fd46b 36%, transparent) 90px 120px,
+        color-mix(in srgb, #45b7ff 40%, transparent) 120px 150px,
+        color-mix(in srgb, #5d68e8 40%, transparent) 150px 180px,
+        color-mix(in srgb, #a855f7 44%, transparent) 180px 210px
+      ),
+      linear-gradient(180deg, color-mix(in srgb, var(--bg-2) 82%, white), var(--bg) 34rem);
+  }
+
+  :root[data-theme="rainbow"] .v5-shell .panel::before,
+  :root[data-theme="rainbow"] .v5-shell .side-rail::before,
+  :root[data-theme="rainbow"] .bottom-dock::before {
+    background:
+      repeating-linear-gradient(
+        112deg,
+        color-mix(in srgb, #ff4d4d 16%, transparent) 0 22px,
+        color-mix(in srgb, #ff9a2f 15%, transparent) 22px 44px,
+        color-mix(in srgb, #ffe45c 13%, transparent) 44px 66px,
+        color-mix(in srgb, #4fd46b 13%, transparent) 66px 88px,
+        color-mix(in srgb, #45b7ff 15%, transparent) 88px 110px,
+        color-mix(in srgb, #5d68e8 15%, transparent) 110px 132px,
+        color-mix(in srgb, #a855f7 16%, transparent) 132px 154px
+      ),
+      linear-gradient(135deg, color-mix(in srgb, white 24%, transparent), transparent 42%);
+  }
+
   .v5-shell .side-rail {
     gap: 12px;
   }
@@ -2167,12 +2336,19 @@ body {
     grid-template-columns: repeat(6, minmax(0, 1fr));
     width: min(100% - 16px, 560px);
     padding: 5px;
+    background:
+      linear-gradient(145deg, color-mix(in srgb, var(--glass-highlight) 38%, transparent), transparent 54%),
+      color-mix(in srgb, var(--glass) 56%, transparent);
   }
 
   .dock-button {
     min-height: 38px;
     font-size: 0.72rem;
     padding-inline: 2px;
+  }
+
+  .dock-button.is-active {
+    transform: translateY(-3px) scale(1.04);
   }
 
   .utility-grid,

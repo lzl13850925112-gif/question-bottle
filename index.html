@@ -420,11 +420,23 @@
               <summary data-i18n="faq.copyQuestion">复制公共留言板的链接可以干些什么？</summary>
               <p data-i18n="faq.copyAnswer">它可以直接打开某条公开留言，方便稍后回来，或发给朋友看同一条内容。私人链接仍然只用于查看自己的回复。</p>
             </details>
+            <details>
+              <summary data-i18n="faq.privateQuestion">私人链接和公共链接有什么区别？</summary>
+              <p data-i18n="faq.privateAnswer">私人链接用于查看你自己问题收到的回复；公共链接只定位到公开留言板上的一条内容。请不要把私人链接当作公开展示入口。</p>
+            </details>
+            <details>
+              <summary data-i18n="faq.localQuestion">换手机或清浏览器后还能找回内容吗？</summary>
+              <p data-i18n="faq.localAnswer">本地记录依赖当前浏览器保存的 token 和历史链接。换设备、清缓存或无痕浏览都可能丢失本地索引，所以重要内容请先自己保存。</p>
+            </details>
+            <details>
+              <summary data-i18n="faq.pollQuestion">投票功能什么时候开放？</summary>
+              <p data-i18n="faq.pollAnswer">前端已经预留完成，但需要先手动执行数据库迁移。迁移完成前，页面不会尝试加载投票数据。</p>
+            </details>
           </section>
 
           <section class="settings-section">
             <h3 data-i18n="siteInfo.title">网站信息</h3>
-            <p data-i18n="siteInfo.project">这是 Figaro 和 OpenAI 工具一起搭建与维护的匿名留言空间。</p>
+            <p data-i18n="siteInfo.project">这是 Figaro 运用 OpenAI 工具完成制作的匿名留言空间，所有编程工作都由 AI 完成。</p>
             <p><span data-i18n="siteInfo.author">作者</span>：Figaro · figarozou123@gmail.com</p>
             <p data-i18n="siteInfo.copyright">© Figaro. 内容与界面仍在持续实验和维护中，请不要复制为误导性的同名服务。</p>
             <p data-i18n="siteInfo.privacy">网站围绕匿名使用设计：没有账号系统，普通匿名内容不会连接到真实身份；用于找回本机内容的 owner token 会先在浏览器中哈希后再提交。开发者通常不能从正常匿名流程中直接识别具体用户。也请理解，没有任何联网系统能承诺绝对匿名；托管、数据库和网络服务仍可能处理请求。如果未来出现违法滥用，可能需要适度管理。</p>

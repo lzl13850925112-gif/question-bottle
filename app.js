@@ -125,7 +125,7 @@ const SEED_QUESTIONS = [...new Set(SEED_QUESTION_TEXTS)].map((text, index) => ({
 }));
 
 const SITE_NOTE = {
-  version: "6.0",
+  version: "6.2",
   textKey: "update.text"
 };
 
@@ -135,7 +135,7 @@ const I18N = {
     "app.eyebrow": "匿名留言 · 问题漂流瓶",
     "app.intro": "可以匿名发一条短留言，也可以留下问题等别人回答。这里不需要账号，也不会显示名字。",
     "app.privacy": "这里不使用账号。其他人不会看到是谁写的内容。网站只用一个保存在你浏览器里的本地 token，帮你管理自己的内容。请不要提交敏感个人信息；托管和数据库服务仍可能有技术日志。",
-    "update.text": "整理了整体结构，新增了一些新的功能和浏览方式。",
+    "update.text": "强化白日主题玻璃层次，修正移动端彩虹渐变，并补充常见问题。",
     "theme.night": "夜间",
     "theme.day": "日间",
     "theme.grass": "青草",
@@ -168,8 +168,14 @@ const I18N = {
     "faq.vpnAnswer": "网站部署在海外服务上，不同网络环境访问速度可能不同。如果打不开，换个网络或使用稳定的代理可能会更顺。",
     "faq.copyQuestion": "复制公共留言板的链接可以干些什么？",
     "faq.copyAnswer": "它可以直接打开某条公开留言，方便稍后回来，或发给朋友看同一条内容。私人链接仍然只用于查看自己的回复。",
+    "faq.privateQuestion": "私人链接和公共链接有什么区别？",
+    "faq.privateAnswer": "私人链接用于查看你自己问题收到的回复；公共链接只定位到公开留言板上的一条内容。请不要把私人链接当作公开展示入口。",
+    "faq.localQuestion": "换手机或清浏览器后还能找回内容吗？",
+    "faq.localAnswer": "本地记录依赖当前浏览器保存的 token 和历史链接。换设备、清缓存或无痕浏览都可能丢失本地索引，所以重要内容请先自己保存。",
+    "faq.pollQuestion": "投票功能什么时候开放？",
+    "faq.pollAnswer": "前端已经预留完成，但需要先手动执行数据库迁移。迁移完成前，页面不会尝试加载投票数据。",
     "siteInfo.title": "网站信息",
-    "siteInfo.project": "这是 Figaro 和 OpenAI 工具一起搭建与维护的匿名留言空间。",
+    "siteInfo.project": "这是 Figaro 运用 OpenAI 工具完成制作的匿名留言空间，所有编程工作都由 AI 完成。",
     "siteInfo.author": "作者",
     "siteInfo.copyright": "© Figaro. 内容与界面仍在持续实验和维护中，请不要复制为误导性的同名服务。",
     "siteInfo.privacy": "网站围绕匿名使用设计：没有账号系统，普通匿名内容不会连接到真实身份；用于找回本机内容的 owner token 会先在浏览器中哈希后再提交。开发者通常不能从正常匿名流程中直接识别具体用户。也请理解，没有任何联网系统能承诺绝对匿名；托管、数据库和网络服务仍可能处理请求。如果未来出现违法滥用，可能需要适度管理。",
@@ -354,7 +360,7 @@ const I18N = {
     "app.eyebrow": "Anonymous notes · question bottle",
     "app.intro": "Leave a short anonymous note, or send a question for someone to answer. No account. No names.",
     "app.privacy": "No account is used here. Other visitors will not see who wrote something. A local browser token helps keep your own content together. Please do not submit sensitive personal information; hosting and database services may still keep technical logs.",
-    "update.text": "Reorganized the overall structure and added several new ways to browse and interact.",
+    "update.text": "Strengthens the Day glass layer, fixes mobile Rainbow gradients, and expands the FAQ.",
     "theme.night": "Night",
     "theme.day": "Day",
     "theme.grass": "Grass",
@@ -387,8 +393,14 @@ const I18N = {
     "faq.vpnAnswer": "The site is hosted on overseas services, so access speed can vary by network. If it does not open, another network or a stable proxy may help.",
     "faq.copyQuestion": "What can a public board link do?",
     "faq.copyAnswer": "It opens a specific public note, so you can return later or show someone the same item. Private links are still only for checking your own replies.",
+    "faq.privateQuestion": "How are private links different from public links?",
+    "faq.privateAnswer": "Private links are for checking replies to your own questions. Public links point to one public board item. Please do not treat private links as public display links.",
+    "faq.localQuestion": "Can I recover content after changing phones or clearing the browser?",
+    "faq.localAnswer": "Local records depend on this browser's saved token and history links. Changing devices, clearing storage, or using private browsing can lose the local index, so keep important content yourself.",
+    "faq.pollQuestion": "When will polls open?",
+    "faq.pollAnswer": "The frontend is ready, but the database migration still needs to be applied manually. Until then, the page will not try to load poll data.",
     "siteInfo.title": "Site Info",
-    "siteInfo.project": "This anonymous space is built and maintained by Figaro with OpenAI tools.",
+    "siteInfo.project": "This anonymous space was made by Figaro using OpenAI tools, with all programming work completed by AI.",
     "siteInfo.author": "Author",
     "siteInfo.copyright": "© Figaro. The content and interface are still being maintained and experimented with; please do not copy it as a misleading service with the same identity.",
     "siteInfo.privacy": "The site is designed around anonymous use: there is no account system, ordinary anonymous content is not connected to real identity, and owner tokens used for local recovery are hashed in the browser before submission. The developer generally cannot identify specific visitors from normal anonymous flows. Still, no online system can promise absolute anonymity; hosting, database, and network providers may process requests. If illegal abuse appears in the future, light moderation may be needed.",
