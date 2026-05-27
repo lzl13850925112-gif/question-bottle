@@ -81,6 +81,20 @@
             data-i18n-placeholder="board.placeholder"
             required
           ></textarea>
+          <label class="toolbar-field" for="public-message-topic">
+            <span data-i18n="controls.topic">主题</span>
+            <select id="public-message-topic" aria-label="留言主题">
+              <option value="auto" data-i18n="topic.auto">自动归类</option>
+              <option value="life" data-i18n="questionType.life">生活</option>
+              <option value="relationships" data-i18n="questionType.relationships">关系</option>
+              <option value="memory" data-i18n="questionType.memory">回忆</option>
+              <option value="mood" data-i18n="questionType.mood">情绪</option>
+              <option value="study" data-i18n="questionType.study">学习</option>
+              <option value="ai" data-i18n="questionType.ai">AI</option>
+              <option value="other" data-i18n="questionType.other">其他</option>
+            </select>
+            <span class="small" data-i18n="topic.hint">不选择主题时，系统会自动归类，可能不精准。</span>
+          </label>
           <div class="form-row">
             <span class="counter" data-counter-for="public-message-text">0 / 280</span>
             <button type="submit" data-i18n="actions.publish">发布</button>
@@ -155,6 +169,20 @@
             data-i18n-placeholder="ask.placeholder"
             required
           ></textarea>
+          <label class="toolbar-field" for="question-topic">
+            <span data-i18n="controls.topic">主题</span>
+            <select id="question-topic" aria-label="问题主题">
+              <option value="auto" data-i18n="topic.auto">自动归类</option>
+              <option value="life" data-i18n="questionType.life">生活</option>
+              <option value="relationships" data-i18n="questionType.relationships">关系</option>
+              <option value="memory" data-i18n="questionType.memory">回忆</option>
+              <option value="mood" data-i18n="questionType.mood">情绪</option>
+              <option value="study" data-i18n="questionType.study">学习</option>
+              <option value="ai" data-i18n="questionType.ai">AI</option>
+              <option value="other" data-i18n="questionType.other">其他</option>
+            </select>
+            <span class="small" data-i18n="topic.hint">不选择主题时，系统会自动归类，可能不精准。</span>
+          </label>
           <label class="check-line" for="question-public-consent">
             <input id="question-public-consent" type="checkbox" />
             <span>
@@ -313,11 +341,25 @@
         <section class="sub-panel poll-panel" aria-labelledby="poll-title" hidden>
           <div class="section-heading compact-heading">
             <h3 id="poll-title" data-i18n="poll.title">匿名投票</h3>
-            <p data-i18n="poll.description">创建 2 到 4 个选项的小投票。数据库迁移审批并执行后即可开放。</p>
+            <p data-i18n="poll.description">创建 2 到 4 个选项的小投票。投票后会显示当前结果。</p>
           </div>
           <form id="poll-form" class="form compact-form">
             <label for="poll-question" data-i18n="poll.questionLabel">投票问题</label>
             <input id="poll-question" maxlength="160" data-i18n-placeholder="poll.questionPlaceholder" placeholder="例如：今晚你更想做什么？" />
+            <label class="toolbar-field" for="poll-topic">
+              <span data-i18n="controls.topic">主题</span>
+              <select id="poll-topic" aria-label="投票主题">
+                <option value="auto" data-i18n="topic.auto">自动归类</option>
+                <option value="life" data-i18n="questionType.life">生活</option>
+                <option value="relationships" data-i18n="questionType.relationships">关系</option>
+                <option value="memory" data-i18n="questionType.memory">回忆</option>
+                <option value="mood" data-i18n="questionType.mood">情绪</option>
+                <option value="study" data-i18n="questionType.study">学习</option>
+                <option value="ai" data-i18n="questionType.ai">AI</option>
+                <option value="other" data-i18n="questionType.other">其他</option>
+              </select>
+              <span class="small" data-i18n="topic.hint">不选择主题时，系统会自动归类，可能不精准。</span>
+            </label>
             <div class="poll-options">
               <input class="poll-option-input" maxlength="80" data-i18n-placeholder="poll.optionPlaceholder1" placeholder="选项 1" />
               <input class="poll-option-input" maxlength="80" data-i18n-placeholder="poll.optionPlaceholder2" placeholder="选项 2" />
@@ -502,6 +544,30 @@
           <article>
             <h3 data-i18n="guide.step10Title">桌面端</h3>
             <p data-i18n="guide.step10Body">桌面端有较多柔和过渡。如果感觉交互反馈慢半拍，请稍等片刻，通常是内容和动效还在完成加载。</p>
+          </article>
+          <article>
+            <h3 data-i18n="guide.step11Title">分类</h3>
+            <p data-i18n="guide.step11Body">分类只是帮助浏览的线索。它会综合多个关键词判断，但不会改变内容，也不一定完全准确。</p>
+          </article>
+          <article>
+            <h3 data-i18n="guide.step12Title">更多功能</h3>
+            <p data-i18n="guide.step12Body">更多里会放不适合挤进主界面的小功能。投票已经预留好，等数据库迁移完成后再开放。</p>
+          </article>
+          <article>
+            <h3 data-i18n="guide.step13Title">安全感</h3>
+            <p data-i18n="guide.step13Body">这里没有账号系统，但仍然是联网服务。请不要写能直接识别你的敏感信息。</p>
+          </article>
+          <article>
+            <h3 data-i18n="guide.step14Title">公开和私人</h3>
+            <p data-i18n="guide.step14Body">公开留言会出现在留言板；私人链接主要用于查看自己问题收到的回复，不适合作为公开展示链接。</p>
+          </article>
+          <article>
+            <h3 data-i18n="guide.step15Title">本地记录</h3>
+            <p data-i18n="guide.step15Body">本地记录依赖同一个浏览器和同一个网址。预览、localhost 和正式网站之间不会自动共享记录。</p>
+          </article>
+          <article>
+            <h3 data-i18n="guide.step16Title">投票</h3>
+            <p data-i18n="guide.step16Body">投票在更多功能里，支持 2 到 4 个选项。数据库迁移完成前，页面会先保持关闭状态。</p>
           </article>
         </div>
       </section>

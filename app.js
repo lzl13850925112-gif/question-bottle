@@ -33,6 +33,7 @@ const LANGUAGE_KEY = "questionBottle.language";
 const SEEN_QUESTIONS_META_KEY = "questionBottle.seenQuestionMeta";
 const THEME_KEY = "questionBottle.theme";
 const POLL_VOTES_KEY = "questionBottle.pollVotes";
+const TOPIC_PREFIX_PATTERN = /^\[\[topic:([a-z_]+)\]\]\s*/i;
 const POLLS_FRONTEND_ENABLED = window.BOTTLE_ENABLE_POLLS === true;
 const MAX_RECENT_QUESTIONS = 12;
 const PUBLIC_MESSAGE_COLLAPSE_LENGTH = 140;
@@ -125,7 +126,7 @@ const SEED_QUESTIONS = [...new Set(SEED_QUESTION_TEXTS)].map((text, index) => ({
 }));
 
 const SITE_NOTE = {
-  version: "6.4",
+  version: "6.5",
   textKey: "update.text"
 };
 
@@ -135,7 +136,7 @@ const I18N = {
     "app.eyebrow": "匿名留言 · 问题漂流瓶",
     "app.intro": "可以匿名发一条短留言，也可以留下问题等别人回答。这里不需要账号，也不会显示名字。",
     "app.privacy": "这里不使用账号。其他人不会看到是谁写的内容。网站只用一个保存在你浏览器里的本地 token，帮你管理自己的内容。请不要提交敏感个人信息；托管和数据库服务仍可能有技术日志。",
-    "update.text": "修正主题叠画期间的交互、扩大设置关闭区，并优化分类与常见问题。",
+    "update.text": "修正滚动位置下的主题叠画，完善使用指南和长弹层玻璃背景。",
     "theme.night": "夜间",
     "theme.day": "日间",
     "theme.grass": "青草",
@@ -225,6 +226,9 @@ const I18N = {
     "controls.filter": "筛选",
     "controls.sort": "排序",
     "controls.type": "类型",
+    "controls.topic": "主题",
+    "topic.auto": "自动归类",
+    "topic.hint": "不选择主题时，系统会自动归类，可能不精准。",
     "filter.default": "全部",
     "filter.unanswered": "只看未回复",
     "filter.related": "和我有关",
@@ -278,7 +282,7 @@ const I18N = {
     "more.settings": "打开设置",
     "more.pollsLater": "投票功能已经先收进这里，等后端数据库迁移审批后再开放。",
     "poll.title": "匿名投票",
-    "poll.description": "创建 2 到 4 个选项的小投票。数据库迁移审批并执行后即可开放。",
+    "poll.description": "创建 2 到 4 个选项的小投票。投票后会显示当前结果。",
     "poll.questionLabel": "投票问题",
     "poll.questionPlaceholder": "例如：今晚你更想做什么？",
     "poll.optionPlaceholder1": "选项 1",
@@ -331,6 +335,18 @@ const I18N = {
     "guide.step9Body": "安静模式会降低页面的提示感和信息密度，让浏览节奏慢一点。",
     "guide.step10Title": "桌面端",
     "guide.step10Body": "桌面端有较多柔和过渡。如果感觉交互反馈慢半拍，请稍等片刻，通常是内容和动效还在完成加载。",
+    "guide.step11Title": "分类",
+    "guide.step11Body": "发布留言、问题或投票时可以手动选择主题；不选时系统会自动归类，但不一定精准。",
+    "guide.step12Title": "更多功能",
+    "guide.step12Body": "更多里会放不适合挤进主界面的小功能。投票已经预留好，等数据库迁移完成后再开放。",
+    "guide.step13Title": "安全感",
+    "guide.step13Body": "这里没有账号系统，但仍然是联网服务。请不要写能直接识别你的敏感信息。",
+    "guide.step14Title": "公开和私人",
+    "guide.step14Body": "公开留言会出现在留言板；私人链接主要用于查看自己问题收到的回复，不适合作为公开展示链接。",
+    "guide.step15Title": "本地记录",
+    "guide.step15Body": "本地记录依赖同一个浏览器和同一个网址。预览、localhost 和正式网站之间不会自动共享记录。",
+    "guide.step16Title": "投票",
+    "guide.step16Body": "投票在更多功能里，支持 2 到 4 个选项。数据库迁移完成前，页面会先保持关闭状态。",
     "translation.eyebrow": "翻译",
     "translation.title": "实时翻译（Beta）",
     "translation.developing": "开发中",
@@ -366,7 +382,7 @@ const I18N = {
     "app.eyebrow": "Anonymous notes · question bottle",
     "app.intro": "Leave a short anonymous note, or send a question for someone to answer. No account. No names.",
     "app.privacy": "No account is used here. Other visitors will not see who wrote something. A local browser token helps keep your own content together. Please do not submit sensitive personal information; hosting and database services may still keep technical logs.",
-    "update.text": "Fixes interaction during theme crossfades, enlarges the settings close target, and improves categories and FAQ.",
+    "update.text": "Fixes theme crossfades while scrolled, improves the guide, and extends glass backgrounds in long sheets.",
     "theme.night": "Night",
     "theme.day": "Day",
     "theme.grass": "Grass",
@@ -456,6 +472,9 @@ const I18N = {
     "controls.filter": "Filter",
     "controls.sort": "Sort",
     "controls.type": "Type",
+    "controls.topic": "Topic",
+    "topic.auto": "Auto category",
+    "topic.hint": "If no topic is chosen, the system will categorize it automatically and may be inaccurate.",
     "filter.default": "All",
     "filter.unanswered": "No replies",
     "filter.related": "Related to me",
@@ -509,7 +528,7 @@ const I18N = {
     "more.settings": "Open Settings",
     "more.pollsLater": "Polls are parked here and will open after the backend database migration is approved.",
     "poll.title": "Anonymous polls",
-    "poll.description": "Create a small poll with 2 to 4 options. It can open after the database migration is approved and applied.",
+    "poll.description": "Create a small poll with 2 to 4 options. Current results appear after voting.",
     "poll.questionLabel": "Poll question",
     "poll.questionPlaceholder": "For example: What would you rather do tonight?",
     "poll.optionPlaceholder1": "Option 1",
@@ -562,6 +581,18 @@ const I18N = {
     "guide.step9Body": "Quiet mode lowers prompts and visual density, so the page feels slower and calmer.",
     "guide.step10Title": "Desktop",
     "guide.step10Body": "Desktop uses several soft transitions. If feedback feels a little late, wait a moment; content and motion may still be settling.",
+    "guide.step11Title": "Categories",
+    "guide.step11Body": "When posting a note, question, or poll, you can choose a topic yourself. If you skip it, the system will categorize it automatically and may be wrong.",
+    "guide.step12Title": "More",
+    "guide.step12Body": "More holds small features that should not crowd the main interface. Polls are prepared and will open after the database migration.",
+    "guide.step13Title": "Safety",
+    "guide.step13Body": "There is no account system here, but it is still an online service. Avoid details that directly identify you.",
+    "guide.step14Title": "Public and private",
+    "guide.step14Body": "Public notes appear on the board. Private links are mainly for checking replies to your own questions and should not be used as public display links.",
+    "guide.step15Title": "Local records",
+    "guide.step15Body": "Local records depend on the same browser and the same address. Preview, localhost, and the live site do not automatically share records.",
+    "guide.step16Title": "Polls",
+    "guide.step16Body": "Polls live under More and support 2 to 4 options. Until the database migration is applied, the page keeps them closed.",
     "translation.eyebrow": "Translate",
     "translation.title": "Live Translation (Beta)",
     "translation.developing": "In development",
@@ -623,6 +654,7 @@ const settingsSheet = document.querySelector("#settings-sheet");
 
 const publicMessageForm = document.querySelector("#public-message-form");
 const publicMessageText = document.querySelector("#public-message-text");
+const publicMessageTopic = document.querySelector("#public-message-topic");
 const publicMessageList = document.querySelector("#public-message-list");
 const publicMessageFilter = document.querySelector("#public-message-filter");
 const publicMessageSort = document.querySelector("#public-message-sort");
@@ -634,6 +666,7 @@ const refreshMessagesButton = document.querySelector("#refresh-messages");
 
 const questionForm = document.querySelector("#question-form");
 const questionText = document.querySelector("#question-text");
+const questionTopic = document.querySelector("#question-topic");
 const questionPublicConsent = document.querySelector("#question-public-consent");
 const claimResult = document.querySelector("#claim-result");
 const claimLink = document.querySelector("#claim-link");
@@ -662,6 +695,7 @@ const feedbackKind = document.querySelector("#feedback-kind");
 const feedbackText = document.querySelector("#feedback-text");
 const pollForm = document.querySelector("#poll-form");
 const pollQuestion = document.querySelector("#poll-question");
+const pollTopic = document.querySelector("#poll-topic");
 const pollOptionInputs = [...document.querySelectorAll(".poll-option-input")];
 const pollKeepPublic = document.querySelector("#poll-keep-public");
 const pollList = document.querySelector("#poll-list");
@@ -980,21 +1014,11 @@ function closeSheets() {
 }
 
 function createThemeCrossfadeClone() {
-  const transitionTargets = [...document.querySelectorAll(".app-shell, .bottom-dock")];
-  if (!transitionTargets.length) return null;
-
   document.querySelector(".theme-crossfade-clone")?.remove();
   const overlay = document.createElement("div");
   overlay.className = "theme-crossfade-clone";
   overlay.setAttribute("aria-hidden", "true");
   overlay.style.background = getComputedStyle(document.body).background;
-
-  transitionTargets.forEach((target) => {
-    const clone = target.cloneNode(true);
-    clone.querySelectorAll("script").forEach((node) => node.remove());
-    clone.querySelectorAll("[id]").forEach((node) => node.removeAttribute("id"));
-    overlay.append(clone);
-  });
   document.body.append(overlay);
   window.requestAnimationFrame(() => overlay.classList.add("is-fading"));
   window.setTimeout(() => overlay.remove(), 5600);
@@ -1079,12 +1103,13 @@ async function submitPublicMessage(event) {
 
   await withBusy(publicMessageForm, async () => {
     const { error } = await state.client.rpc("submit_public_message", {
-      message_body: text,
+      message_body: encodeTopicContent(text, publicMessageTopic?.value),
       owner_token_hash_value: state.ownerTokenHash
     });
 
     if (error) throw error;
     publicMessageForm.reset();
+    if (publicMessageTopic) publicMessageTopic.value = "auto";
     updateAllCounters();
     state.hadStoredVisitorToken = true;
     setStatus("留言已发布。");
@@ -1152,10 +1177,11 @@ async function submitPoll(event) {
   const validation = validateText(question, 4, 160);
   if (!validation.ok) return setStatus(validation.message, true);
   if (options.length < 2) return setStatus("投票至少需要 2 个选项。", true);
+  if (options.length > 4) return setStatus("投票最多 4 个选项。", true);
 
   await withBusy(pollForm, async () => {
     const { error } = await state.client.rpc("create_poll", {
-      question_body: question,
+      question_body: encodeTopicContent(question, pollTopic?.value),
       option_bodies: options,
       owner_token_hash_value: state.ownerTokenHash,
       keep_public_after_end_value: pollKeepPublic.checked
@@ -1164,6 +1190,7 @@ async function submitPoll(event) {
     if (isMissingRpc(error)) throw new Error(t("poll.missing"));
     if (error) throw error;
     pollForm.reset();
+    if (pollTopic) pollTopic.value = "auto";
     pollKeepPublic.checked = true;
     setStatus("投票已创建。");
     await loadPolls();
@@ -1185,6 +1212,7 @@ async function handlePollClick(event) {
   if (button.dataset.pollAction === "end") {
     await endPoll(pollId);
   }
+
 }
 
 async function votePoll(pollId, optionId) {
@@ -1257,7 +1285,7 @@ function renderPollCard(poll) {
         <p class="message-meta">${poll.is_active ? t("poll.title") : t("poll.closed")} · ${formatDate(poll.created_at)} · ${formatText("poll.total", { count: totalVotes })}</p>
         ${poll.owned_by_me && poll.is_active ? `<button class="secondary mini-button" data-poll-action="end" type="button">${t("poll.end")}</button>` : ""}
       </div>
-      <p class="message-body">${escapeHtml(poll.question_text || "")}</p>
+      <p class="message-body">${escapeHtml(getTopicContent(poll.question_text || ""))}</p>
       <div class="poll-options-list">
         ${options.map((option) => {
           const count = Number(option.vote_count || 0);
@@ -1374,6 +1402,9 @@ function questionMatchesSelectedType(text) {
 }
 
 function classifyQuestionType(text) {
+  const explicitTopic = getTopicValue(text);
+  if (explicitTopic && explicitTopic !== "auto") return explicitTopic;
+
   const value = normalizeClassifiableText(text);
   if (!value) return "other";
 
@@ -1419,7 +1450,7 @@ function classifyQuestionType(text) {
 }
 
 function normalizeClassifiableText(text) {
-  return String(text || "")
+  return getTopicContent(text)
     .toLowerCase()
     .replace(/[，。！？、；：“”‘’（）【】《》,.!?;:"'()[\]{}<>]/g, " ")
     .replace(/\s+/g, " ")
@@ -1485,13 +1516,13 @@ function renderPublicMessages(messages) {
 }
 
 function renderPublicMessageCard(message) {
-  const body = message.message_text || "";
+  const body = getTopicContent(message.message_text || "");
   const isLongBody = body.length > PUBLIC_MESSAGE_COLLAPSE_LENGTH;
   const replyCount = Number(message.reply_count || 0);
   const likeCount = Number(message.like_count || 0);
   const messageId = escapeHtml(message.public_id);
   const isSaved = isMessageSaved(message.public_id);
-  const questionType = classifyQuestionType(body);
+  const questionType = classifyQuestionType(message.message_text || "");
 
   return `
     <article class="message-card${isSaved ? " is-saved" : ""}" id="post-${messageId}" data-message-id="${messageId}">
@@ -1648,7 +1679,7 @@ function toggleSavedMessage(messageId) {
   } else {
     state.savedMessages[messageId] = {
       public_id: message.public_id,
-      message_text: message.message_text,
+      message_text: getTopicContent(message.message_text),
       message_kind: message.message_kind,
       created_at: message.created_at,
       saved_at: new Date().toISOString()
@@ -1699,7 +1730,7 @@ function renderSavedContent() {
     .map((item) => `
       <article class="content-card saved-card" data-saved-message-id="${escapeHtml(item.public_id)}">
         <p class="message-meta">${formatText("saved.savedAt", { savedAt: formatDate(item.saved_at) })}${item.created_at ? formatText("saved.originalAt", { createdAt: formatDate(item.created_at) }) : ""}</p>
-        <p class="message-body">${escapeHtml(item.message_text || "本地收藏内容")}</p>
+        <p class="message-body">${escapeHtml(getTopicContent(item.message_text) || "本地收藏内容")}</p>
         <div class="content-actions">
           <button class="secondary mini-button" data-action="open-saved-message" type="button">${t("actions.openSaved")}</button>
           <button class="secondary mini-button" data-action="remove-saved-message" type="button">${t("actions.removeSaved")}</button>
@@ -1811,7 +1842,7 @@ async function likePublicMessage(messageId) {
 
 async function editPublicMessage(messageId) {
   const current = state.publicMessages.find((message) => message.public_id === messageId);
-  const nextText = prompt("修改留言", current?.message_text || "");
+  const nextText = prompt("修改留言", getTopicContent(current?.message_text) || "");
   if (nextText === null) return;
 
   const text = normalizeText(nextText);
@@ -1911,7 +1942,7 @@ async function submitQuestion(event) {
 
   await withBusy(questionForm, async () => {
     let { data, error } = await state.client.rpc("submit_question", {
-      question_body: text,
+      question_body: encodeTopicContent(text, questionTopic?.value),
       claim_token_hash_value: tokenHash,
       allow_public_value: questionPublicConsent.checked,
       owner_token_hash_value: state.ownerTokenHash
@@ -1919,7 +1950,7 @@ async function submitQuestion(event) {
 
     if (isMissingRpc(error)) {
       const fallback = await state.client.rpc("submit_question", {
-        question_body: text,
+        question_body: encodeTopicContent(text, questionTopic?.value),
         claim_token_hash_value: tokenHash
       });
       data = fallback.data;
@@ -1945,6 +1976,7 @@ async function submitQuestion(event) {
     });
     state.hadStoredVisitorToken = true;
     questionForm.reset();
+    if (questionTopic) questionTopic.value = "auto";
     updateAllCounters();
     setStatus("问题已保存。也可以稍后在“我的内容”里查看。");
   });
@@ -2015,7 +2047,7 @@ async function loadRandomQuestion() {
     rememberSeenQuestion(state.currentQuestion.public_id);
     randomQuestionCard.innerHTML = `
       <p class="reply-meta">一个匿名问题 · ${Number(state.currentQuestion.answer_count || 0)} 条回复${formatSeenQuestionHint(seenMeta)}</p>
-      <p>${escapeHtml(state.currentQuestion.question_text)}</p>
+      <p>${escapeHtml(getTopicContent(state.currentQuestion.question_text))}</p>
     `;
     answerForm.hidden = false;
     skipQuestionButton.hidden = false;
@@ -2121,7 +2153,7 @@ async function submitSeedAnswer(text) {
     return setStatus("请先确认这条回答会公开显示在留言板。", true);
   }
 
-  const messageText = formatSeedAnswerMessage(state.currentQuestion.question_text, text);
+  const messageText = formatSeedAnswerMessage(getTopicContent(state.currentQuestion.question_text), text);
   const validation = validateText(messageText, 2, 280);
   if (!validation.ok) {
     return setStatus("这条回答有点长，请缩短后再发布。", true);
@@ -2232,7 +2264,7 @@ function renderReplies(rows, options = {}) {
   replyList.innerHTML = `
     <article class="question-card">
       <p class="reply-meta">你的问题</p>
-      <p>${escapeHtml(first.question_text)}</p>
+      <p>${escapeHtml(getTopicContent(first.question_text))}</p>
     </article>
     ${answerHtml}
   `;
@@ -2326,6 +2358,23 @@ function normalizeQuestionText(text) {
   const normalized = normalizeText(text);
   if (!normalized) return normalized;
   return /[?？！!。.]\s*$/.test(normalized) ? normalized : `${normalized}？`;
+}
+
+function getTopicValue(text) {
+  const match = String(text || "").match(TOPIC_PREFIX_PATTERN);
+  return match?.[1] || "";
+}
+
+function getTopicContent(text) {
+  return String(text || "").replace(TOPIC_PREFIX_PATTERN, "");
+}
+
+function encodeTopicContent(text, topic) {
+  const cleanText = getTopicContent(text).trim();
+  const safeTopic = ["life", "relationships", "memory", "mood", "study", "ai", "other"].includes(topic)
+    ? topic
+    : "";
+  return safeTopic ? `[[topic:${safeTopic}]] ${cleanText}` : cleanText;
 }
 
 function getVisitorToken() {
@@ -2664,7 +2713,7 @@ function renderMySection(title, items, type) {
           return `
             <article class="content-card" data-my-type="${type}" data-my-id="${escapeHtml(item.public_id)}">
               <p class="message-meta">${formatDate(item.created_at)}${item.edited_at ? ` · 已于 ${formatDate(item.edited_at)} 编辑过` : ""}${item.reply_count ? ` · ${Number(item.reply_count)} 条回复` : ""}</p>
-              <p class="message-body">${escapeHtml(item.body)}</p>
+              <p class="message-body">${escapeHtml(getTopicContent(item.body))}</p>
               <div class="content-actions">
                 ${localToken ? '<button class="secondary mini-button" data-action="view-replies" type="button">查看回复</button>' : ""}
                 ${type === "question" && !localToken ? '<button class="secondary mini-button" data-action="recover-replies" type="button">找回回复</button>' : ""}
